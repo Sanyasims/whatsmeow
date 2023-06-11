@@ -61,6 +61,9 @@ func main() {
 		//не продолжаем
 		return
 	}
+
+	// выводим информацию
+	log.Infof("Starting on %v", configuration.Host)
 }
 
 // Метод отправляет сообщение
