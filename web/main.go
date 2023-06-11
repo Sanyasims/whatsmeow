@@ -1,16 +1,45 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"go.mau.fi/whatsmeow"
 	waLog "go.mau.fi/whatsmeow/util/log"
+	"os"
 )
 
-var cli *whatsmeow.Client
 var log waLog.Logger
 
 // стартовый метод
 func main() {
+
+	// считываем файл кофигурации
+	content, err := os.ReadFile("web/config.json")
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error when opening config file: ", err)
+
+		//не продолжаем
+		return
+	}
+
+	// объявляем структуру конфигурации
+	var configuration Configuration
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &configuration)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error during parse Configuration: ", err)
+
+		//не продолжаем
+		return
+	}
 
 	//создаем экземпляр Engine
 	engine := gin.Default()
@@ -21,7 +50,7 @@ func main() {
 	//TODO:получать порт из БД
 
 	//запускаем сервер
-	err := engine.Run("127.0.0.1:10001")
+	err = engine.Run(configuration.Host)
 
 	//если есть ошибка
 	if err != nil {
