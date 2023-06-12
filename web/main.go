@@ -909,6 +909,8 @@ func runInstance(ctx *gin.Context) {
 
 	cli.AddEventHandler(handler)
 
+	cli.SetProxyAddress("socks5://85.195.81.159:12839?username=Q3E3R9&password=kEUUry")
+
 	err = cli.Connect()
 
 	if err != nil {

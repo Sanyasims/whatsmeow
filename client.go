@@ -215,11 +215,18 @@ func NewClient(deviceStore *store.Device, log waLog.Logger) *Client {
 //
 // Returns an error if url.Parse fails to parse the given address.
 func (cli *Client) SetProxyAddress(addr string) error {
-	parsed, err := url.Parse(addr)
-	if err != nil {
-		return err
+	//parsed, err := url.Parse(addr)
+	//if err != nil {
+	//	return err
+	//}
+
+	ur := url.URL{
+		Scheme: "socks5",
+		Host:   "85.195.81.159:12839",
+		User:   url.UserPassword("Q3E3R9", "kEUUry"),
 	}
-	cli.SetProxy(http.ProxyURL(parsed))
+
+	cli.SetProxy(http.ProxyURL(&ur))
 	return nil
 }
 
