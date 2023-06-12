@@ -829,6 +829,11 @@ func runInstance(ctx *gin.Context) {
 
 		log.Errorf("Failed to connect to database: %v", err)
 
+		ctx.JSON(200, gin.H{
+			"success": false,
+			"reason":  "Failed to connect to database",
+		})
+
 		return
 	}
 
@@ -837,6 +842,11 @@ func runInstance(ctx *gin.Context) {
 	if err != nil {
 
 		log.Errorf("Failed to get device: %v", err)
+
+		ctx.JSON(200, gin.H{
+			"success": false,
+			"reason":  "Failed to get device",
+		})
 
 		return
 	}
@@ -991,6 +1001,10 @@ func sendMessage(ctx *gin.Context) {
 		//логируем ошибку
 		log.Errorf("Error read body request: ", err)
 
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
 		//не продолжаем
 		return
 	}
@@ -1007,15 +1021,26 @@ func sendMessage(ctx *gin.Context) {
 		//логируем ошибку
 		log.Errorf("Error during parse RequestSendMessage: ", err)
 
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
 		//не продолжаем
 		return
 	}
 
 	//TODO проверять валидность данных
 
+	// парсим идентифкатор Whatsapp, если chatId то его
 	recipient, ok := parseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
 
 	if !ok {
+
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		//отдаем
 		return
 	}
 
@@ -1027,12 +1052,16 @@ func sendMessage(ctx *gin.Context) {
 
 		log.Errorf("Error sending message: %v", err)
 
+		ctx.JSON(500, gin.H{
+			"reason": "Error sending message",
+		})
+
 	} else {
 
 		log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
-	}
 
-	ctx.JSON(200, gin.H{
-		"id": resp.ID,
-	})
+		ctx.JSON(200, gin.H{
+			"id": resp.ID,
+		})
+	}
 }
