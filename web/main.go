@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -803,7 +804,7 @@ func handler(rawEvt interface{}) {
 }
 
 // Метод запускает инстанс
-func runInstance(*gin.Context) {
+func runInstance(ctx *gin.Context) {
 
 	waBinary.IndentXML = true
 
@@ -930,6 +931,10 @@ func runInstance(*gin.Context) {
 		}
 	}()
 
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
+
 	for {
 		select {
 		case <-c:
@@ -977,7 +982,57 @@ func runInstance(*gin.Context) {
 // Метод отправляет сообщение
 func sendMessage(ctx *gin.Context) {
 
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error read body request: ", err)
+
+		//не продолжаем
+		return
+	}
+
+	// объявляем структуру отправки текстового сообщения
+	var requestSendMessage RequestSendMessage
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestSendMessage)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error during parse RequestSendMessage: ", err)
+
+		//не продолжаем
+		return
+	}
+
+	//TODO проверять валидность данных
+
+	recipient, ok := parseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
+
+	if !ok {
+		return
+	}
+
+	msg := &waProto.Message{Conversation: proto.String(requestSendMessage.Message)}
+
+	resp, err := cli.SendMessage(context.Background(), recipient, msg)
+
+	if err != nil {
+
+		log.Errorf("Error sending message: %v", err)
+
+	} else {
+
+		log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
+	}
+
 	ctx.JSON(200, gin.H{
-		"message": "pong",
+		"id": resp.ID,
 	})
 }
