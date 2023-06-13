@@ -222,8 +222,8 @@ func (cli *Client) SetProxyAddress(addr string) error {
 
 	ur := url.URL{
 		Scheme: "socks5",
-		Host:   "85.195.81.159:12839",
-		User:   url.UserPassword("Q3E3R9", "kEUUry"),
+		Host:   "217.29.63.202:10278",
+		User:   url.UserPassword("PyWKxF", "AbMqXf"),
 	}
 
 	cli.SetProxy(http.ProxyURL(&ur))
