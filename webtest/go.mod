@@ -6,7 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/mdp/qrterminal/v3 v3.1.1
-	go.mau.fi/whatsmeow v0.0.0-20230101110842-4d2824cc0205
+	go.mau.fi/whatsmeow v0.0.0-20230614142319-2114a3c181bd
 	google.golang.org/protobuf v1.30.0
 )
 
@@ -32,10 +32,10 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.mau.fi/libsignal v0.1.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/text v0.10.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
