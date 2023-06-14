@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	"io"
 	"mime"
 	"net/http"
@@ -40,7 +41,7 @@ var log waLog.Logger
 var logLevel = "INFO"
 var debugLogs = flag.Bool("debug", true, "Enable debug logs?")
 var dbDialect = flag.String("db-dialect", "sqlite3", "Database dialect (sqlite3 or postgres)")
-var dbAddress = flag.String("db-address", "file:web_test.db?_foreign_keys=on", "Database address")
+var dbAddress = flag.String("db-address", "file:webtest.db?_foreign_keys=on", "Database address")
 var requestFullSync = flag.Bool("request-full-sync", false, "Request full (1 year) history sync when logging in?")
 var pairRejectChan = make(chan bool, 1)
 var historySyncID int32
@@ -49,34 +50,34 @@ var startupTime = time.Now().Unix()
 // Стартовый метод
 func main() {
 
-	//// считываем файл кофигурации
-	//content, err := os.ReadFile("config.json")
-	//
-	//// если есть ошибка
-	//if err != nil {
-	//
-	//	//логируем ошибку
-	//	log.Errorf("Error when opening config file: ", err)
-	//
-	//	//не продолжаем
-	//	return
-	//}
-	//
-	//// объявляем структуру конфигурации
-	//var configuration Configuration
-	//
-	//// лесериализуем из JSON
-	//err = json.Unmarshal(content, &configuration)
-	//
-	//// если есть ошибка
-	//if err != nil {
-	//
-	//	//логируем ошибку
-	//	log.Errorf("Error during parse Configuration: ", err)
-	//
-	//	//не продолжаем
-	//	return
-	//}
+	// считываем файл кофигурации
+	content, err := os.ReadFile("./config.json")
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error when opening config file: ", err)
+
+		//не продолжаем
+		return
+	}
+
+	// объявляем структуру конфигурации
+	var configuration properties.Configuration
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &configuration)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		log.Errorf("Error during parse Configuration: ", err)
+
+		//не продолжаем
+		return
+	}
 
 	//TODO:получать порт из БД
 
@@ -89,7 +90,7 @@ func main() {
 	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
-	err := engine.Run("127.0.0.1:10001")
+	err = engine.Run(configuration.Host)
 
 	//если есть ошибка
 	if err != nil {
@@ -769,7 +770,7 @@ func handler(rawEvt interface{}) {
 		}
 	case *events.HistorySync:
 		id := atomic.AddInt32(&historySyncID, 1)
-		fileName := fmt.Sprintf("web/history-%d-%d.json", startupTime, id)
+		fileName := fmt.Sprintf("webtest/history-%d-%d.json", startupTime, id)
 		file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			log.Errorf("Failed to open file to write history sync: %v", err)
@@ -1012,7 +1013,7 @@ func sendMessage(ctx *gin.Context) {
 	}
 
 	// объявляем структуру отправки текстового сообщения
-	var requestSendMessage RequestSendMessage
+	var requestSendMessage properties.RequestSendMessage
 
 	// лесериализуем из JSON
 	err = json.Unmarshal(content, &requestSendMessage)

@@ -1,4 +1,4 @@
-package main
+package properties
 
 // Configuration Структура конфигурации
 type Configuration struct {
