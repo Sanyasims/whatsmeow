@@ -40,7 +40,7 @@ var log waLog.Logger
 var logLevel = "INFO"
 var debugLogs = flag.Bool("debug", true, "Enable debug logs?")
 var dbDialect = flag.String("db-dialect", "sqlite3", "Database dialect (sqlite3 or postgres)")
-var dbAddress = flag.String("db-address", "file:mdtest.db?_foreign_keys=on", "Database address")
+var dbAddress = flag.String("db-address", "file:web_test.db?_foreign_keys=on", "Database address")
 var requestFullSync = flag.Bool("request-full-sync", false, "Request full (1 year) history sync when logging in?")
 var pairRejectChan = make(chan bool, 1)
 var historySyncID int32
@@ -49,34 +49,34 @@ var startupTime = time.Now().Unix()
 // Стартовый метод
 func main() {
 
-	// считываем файл кофигурации
-	content, err := os.ReadFile("config.json")
-
-	// если есть ошибка
-	if err != nil {
-
-		//логируем ошибку
-		log.Errorf("Error when opening config file: ", err)
-
-		//не продолжаем
-		return
-	}
-
-	// объявляем структуру конфигурации
-	var configuration Configuration
-
-	// лесериализуем из JSON
-	err = json.Unmarshal(content, &configuration)
-
-	// если есть ошибка
-	if err != nil {
-
-		//логируем ошибку
-		log.Errorf("Error during parse Configuration: ", err)
-
-		//не продолжаем
-		return
-	}
+	//// считываем файл кофигурации
+	//content, err := os.ReadFile("config.json")
+	//
+	//// если есть ошибка
+	//if err != nil {
+	//
+	//	//логируем ошибку
+	//	log.Errorf("Error when opening config file: ", err)
+	//
+	//	//не продолжаем
+	//	return
+	//}
+	//
+	//// объявляем структуру конфигурации
+	//var configuration Configuration
+	//
+	//// лесериализуем из JSON
+	//err = json.Unmarshal(content, &configuration)
+	//
+	//// если есть ошибка
+	//if err != nil {
+	//
+	//	//логируем ошибку
+	//	log.Errorf("Error during parse Configuration: ", err)
+	//
+	//	//не продолжаем
+	//	return
+	//}
 
 	//TODO:получать порт из БД
 
@@ -89,7 +89,7 @@ func main() {
 	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
-	err = engine.Run(configuration.Host)
+	err := engine.Run("127.0.0.1:10001")
 
 	//если есть ошибка
 	if err != nil {
