@@ -1,20 +1,14 @@
 # syntax=docker/dockerfile:1
-
 FROM golang:1.20
 
 # Set destination for COPY
-WORKDIR /app
+RUN mkdir /build
+WORKDIR /build
 
-# Download Go modules
-COPY go.mod go.sum ./
-RUN go mod download
+RUN export G0111MODULE=on
 
-# Copy the source code. Note the slash at the end, as explained in
-# https://docs.docker.com/engine/reference/builder/#copy
-COPY *.go ./
+RUN cd /build && git clone https://github.com/Sanyasims/whatsmeow.git
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /webtest
+RUN cd /build/whatsmeow/webtest && go build
 
-# Run
-CMD ["/webtest"]
+ENTRYPOINT "/build/whatsmeow/webtest/webtest"
