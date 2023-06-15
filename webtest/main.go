@@ -90,7 +90,7 @@ func main() {
 	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
-	err = engine.Run(config.Host)
+	err = engine.Run(":8080")
 
 	//если есть ошибка
 	if err != nil {
