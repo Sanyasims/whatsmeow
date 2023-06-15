@@ -11,4 +11,6 @@ RUN cd /build && git clone https://github.com/Sanyasims/whatsmeow.git
 
 RUN cd /build/whatsmeow/webtest && go build
 
+WORKDIR /build/whatsmeow/webtest
+
 ENTRYPOINT "/build/whatsmeow/webtest/webtest"
