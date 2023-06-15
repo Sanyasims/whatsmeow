@@ -46,6 +46,7 @@ var requestFullSync = flag.Bool("request-full-sync", false, "Request full (1 yea
 var pairRejectChan = make(chan bool, 1)
 var historySyncID int32
 var startupTime = time.Now().Unix()
+var Config properties.Configuration
 
 // Стартовый метод
 func main() {
@@ -63,11 +64,8 @@ func main() {
 		return
 	}
 
-	// объявляем структуру конфигурации
-	var configuration properties.Configuration
-
 	// лесериализуем из JSON
-	err = json.Unmarshal(content, &configuration)
+	err = json.Unmarshal(content, &Config)
 
 	// если есть ошибка
 	if err != nil {
@@ -90,7 +88,7 @@ func main() {
 	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
-	err = engine.Run(configuration.Host)
+	err = engine.Run(Config.Host)
 
 	//если есть ошибка
 	if err != nil {
@@ -910,7 +908,21 @@ func runInstance(ctx *gin.Context) {
 
 	cli.AddEventHandler(handler)
 
-	cli.SetProxyAddress("socks5://85.195.81.159:12839?username=Q3E3R9&password=kEUUry")
+	// получаем прокси
+	proxy, err := Config.GetProxy()
+
+	// если ошибка
+	if err != nil {
+
+		// логируем ошибку
+		log.Errorf("Failed get proxy from config: %v", err)
+
+		// не продолжаем
+		return
+	}
+
+	// устанавливаем прокси
+	cli.SetProxy(proxy)
 
 	err = cli.Connect()
 

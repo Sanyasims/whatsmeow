@@ -1,10 +1,5 @@
 package properties
 
-// Configuration Структура конфигурации
-type Configuration struct {
-	Host string `json:"host"`
-}
-
 // RequestSendMessage Структура отправки текстового сообщения
 type RequestSendMessage struct {
 	ChatId          string `json:"chatId"`
