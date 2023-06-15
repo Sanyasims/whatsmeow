@@ -57,6 +57,8 @@ func main() {
 	// если есть ошибка
 	if err != nil {
 
+		fmt.Println("Error when opening config file")
+
 		//логируем ошибку
 		log.Errorf("Error when opening config file: ", err)
 
