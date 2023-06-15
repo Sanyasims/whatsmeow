@@ -52,7 +52,7 @@ var config properties.Configuration
 func main() {
 
 	// считываем файл кофигурации
-	content, err := os.ReadFile("./config.json")
+	content, err := os.ReadFile("config.json")
 
 	// если есть ошибка
 	if err != nil {
