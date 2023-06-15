@@ -46,7 +46,7 @@ var requestFullSync = flag.Bool("request-full-sync", false, "Request full (1 yea
 var pairRejectChan = make(chan bool, 1)
 var historySyncID int32
 var startupTime = time.Now().Unix()
-var Config properties.Configuration
+var config properties.Configuration
 
 // Стартовый метод
 func main() {
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	// лесериализуем из JSON
-	err = json.Unmarshal(content, &Config)
+	err = json.Unmarshal(content, &config)
 
 	// если есть ошибка
 	if err != nil {
@@ -88,7 +88,7 @@ func main() {
 	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
-	err = engine.Run(Config.Host)
+	err = engine.Run(config.Host)
 
 	//если есть ошибка
 	if err != nil {
@@ -805,6 +805,20 @@ func handler(rawEvt interface{}) {
 // Метод запускает инстанс
 func runInstance(ctx *gin.Context) {
 
+	// запускаем инстанс в отдельном потоке
+	go startInstance()
+
+	// отдаем ответ
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
+
+	return
+}
+
+// Метод запускает инстанс
+func startInstance() {
+
 	waBinary.IndentXML = true
 
 	flag.Parse()
@@ -828,11 +842,6 @@ func runInstance(ctx *gin.Context) {
 
 		log.Errorf("Failed to connect to database: %v", err)
 
-		ctx.JSON(200, gin.H{
-			"success": false,
-			"reason":  "Failed to connect to database",
-		})
-
 		return
 	}
 
@@ -841,11 +850,6 @@ func runInstance(ctx *gin.Context) {
 	if err != nil {
 
 		log.Errorf("Failed to get device: %v", err)
-
-		ctx.JSON(200, gin.H{
-			"success": false,
-			"reason":  "Failed to get device",
-		})
 
 		return
 	}
@@ -909,7 +913,7 @@ func runInstance(ctx *gin.Context) {
 	cli.AddEventHandler(handler)
 
 	// получаем прокси
-	proxy, err := Config.GetProxy()
+	proxy, err := config.GetProxy()
 
 	// если ошибка
 	if err != nil {
@@ -955,10 +959,6 @@ func runInstance(ctx *gin.Context) {
 			}
 		}
 	}()
-
-	ctx.JSON(200, gin.H{
-		"success": true,
-	})
 
 	for {
 		select {
