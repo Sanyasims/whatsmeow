@@ -977,9 +977,9 @@ func startInstance() {
 
 			if len(cmd) == 0 {
 
-				log.Infof("Stdin closed, exiting")
-
-				cli.Disconnect()
+				//log.Infof("Stdin closed, exiting")
+				//
+				//cli.Disconnect()
 
 				return
 			}
