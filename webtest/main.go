@@ -815,6 +815,8 @@ func runInstance(ctx *gin.Context) {
 		"success": true,
 	})
 
+	time.Sleep(10 * time.Second)
+
 	return
 }
 
