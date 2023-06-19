@@ -10,8 +10,9 @@ import (
 
 // Configuration Структура конфигурации
 type Configuration struct {
-	Host  string `json:"host"`
-	Proxy string `json:"proxy"`
+	Host       string `json:"host"`
+	Proxy      string `json:"proxy"`
+	WebhookUrl string `json:"webhookUrl"`
 }
 
 // GetProxy метод получает прокси из конфинурации

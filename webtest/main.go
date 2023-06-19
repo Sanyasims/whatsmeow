@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mau.fi/whatsmeow/webtest/properties"
+	"go.mau.fi/whatsmeow/webtest/webhook"
 	"io"
 	"mime"
 	"net/http"
@@ -754,9 +755,46 @@ func handler(rawEvt interface{}) {
 		}
 	case *events.Receipt:
 		if evt.Type == events.ReceiptTypeRead || evt.Type == events.ReceiptTypeReadSelf {
+
+			// выводим лог
 			log.Infof("%v was read by %s at %s", evt.MessageIDs, evt.SourceString(), evt.Timestamp)
+
+			//создаем структуру вебхук о статусе сообщения
+			statusMessageWebhook := webhook.StatusMessageWebhook{
+				TypeWebhook:     "statusMessage",
+				WebhookUrl:      config.WebhookUrl,
+				CountTrySending: 0,
+				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+					IdInstance: 0,
+					Wid:        cli.Store.ID.User + "@c.us",
+				},
+				Timestamp:     time.Now().Unix(),
+				StatusMessage: "read",
+			}
+
+			//отправляем вебхук
+			webhook.SendStatusMessage(statusMessageWebhook)
+
 		} else if evt.Type == events.ReceiptTypeDelivered {
+
+			//выводим лог
 			log.Infof("%s was delivered to %s at %s", evt.MessageIDs[0], evt.SourceString(), evt.Timestamp)
+
+			//создаем структуру вебхук о статусе сообщения
+			statusMessageWebhook := webhook.StatusMessageWebhook{
+				TypeWebhook:     "statusMessage",
+				WebhookUrl:      config.WebhookUrl,
+				CountTrySending: 0,
+				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+					IdInstance: 0,
+					Wid:        cli.Store.ID.User + "@c.us",
+				},
+				Timestamp:     time.Now().Unix(),
+				StatusMessage: "delivered",
+			}
+
+			//отправляем вебхук
+			webhook.SendStatusMessage(statusMessageWebhook)
 		}
 	case *events.Presence:
 		if evt.Unavailable {
@@ -1082,5 +1120,21 @@ func sendMessage(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"id": resp.ID,
 		})
+
+		//создаем структуру вебхук о статусе сообщения
+		statusMessageWebhook := webhook.StatusMessageWebhook{
+			TypeWebhook:     "statusMessage",
+			WebhookUrl:      config.WebhookUrl,
+			CountTrySending: 0,
+			InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+				IdInstance: 0,
+				Wid:        cli.Store.ID.User + "@c.us",
+			},
+			Timestamp:     time.Now().Unix(),
+			StatusMessage: "sent",
+		}
+
+		//отправляем вебхук
+		webhook.SendStatusMessage(statusMessageWebhook)
 	}
 }
