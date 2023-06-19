@@ -17,19 +17,29 @@ type StatusMessageWebhook struct {
 	CountTrySending  uint32                  `json:"-"`
 	InstanceWhatsapp InstanceWhatsappWebhook `json:"instanceWhatsapp"`
 	Timestamp        int64                   `json:"timestamp"`
-	StatusMessage    string                  `json:"statusMessage"`
+	StatusMessage    DataStatusMessage       `json:"statusMessage"`
 }
 
-// SendStatusMessage Метод отправляет вебхук о статусе сообщения
-func SendStatusMessage(statusMessageWebhook StatusMessageWebhook) {
+// DataStatusMessage объект данных о статусе сообщения
+type DataStatusMessage struct {
+	IdMessage       string `json:"idMessage"`
+	TimestampStatus int64  `json:"timestampStatus"`
+	Status          string `json:"status"`
+}
+
+// SendStatusMessageWebhook Метод отправляет вебхук о статусе сообщения
+func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook) {
 
 	// сериализуем в JSON
 	postBody, err := json.Marshal(statusMessageWebhook)
 
+	// если ошибка
 	if err != nil {
 
-		log.Errorf("Error serialize message %v", err)
+		// выводим лог
+		log.Errorf("Error serialize status message %v", err)
 
+		// не продолжаем
 		return
 	}
 
@@ -39,7 +49,10 @@ func SendStatusMessage(statusMessageWebhook StatusMessageWebhook) {
 	//отправляем запрос
 	_, err = http.Post(statusMessageWebhook.WebhookUrl, "application/json", responseBody)
 
+	// если ошибка
 	if err != nil {
-		log.Errorf("Error send status message %v", err)
+
+		// выводим лог
+		log.Errorf("Error send status message webhook %v", err)
 	}
 }

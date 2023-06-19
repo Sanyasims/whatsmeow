@@ -718,6 +718,38 @@ func handler(rawEvt interface{}) {
 
 		log.Infof("Received message %s from %s (%s): %+v", evt.Info.ID, evt.Info.SourceString(), strings.Join(metaParts, ", "), evt.Message)
 
+		// если текстовое сообщение
+		if evt.Info.Type == "text" {
+
+			// создаем объект данных webhook о новом сообщении
+			newMessageWebhook := webhook.NewMessageWebhook{
+				TypeWebhook:     "newMessage",
+				WebhookUrl:      config.WebhookUrl,
+				CountTrySending: 0,
+				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+					IdInstance: 0,
+					Wid:        cli.Store.ID.User + "@c.us",
+				},
+				Timestamp: time.Now().Unix(),
+				NewMessage: webhook.NewMessage{
+					Chat: webhook.ChatDataWhatsappMessage{
+						ChatId:    evt.Info.Chat.User + "@c.us",
+						FromMe:    evt.Info.IsFromMe,
+						IdMessage: evt.Info.ID,
+					},
+					Message: webhook.DataWhatsappMessage{
+						TypeMessage: "textMessage",
+						Text:        *evt.Message.Conversation,
+					},
+					MessageTimestamp: evt.Info.Timestamp.Unix(),
+					Status:           "delivered",
+				},
+			}
+
+			// отправляем вебхук
+			webhook.SendNewMessageWebhook(newMessageWebhook)
+		}
+
 		if evt.Message.GetPollUpdateMessage() != nil {
 			decrypted, err := cli.DecryptPollVote(evt)
 			if err != nil {
@@ -759,42 +791,58 @@ func handler(rawEvt interface{}) {
 			// выводим лог
 			log.Infof("%v was read by %s at %s", evt.MessageIDs, evt.SourceString(), evt.Timestamp)
 
-			//создаем структуру вебхук о статусе сообщения
-			statusMessageWebhook := webhook.StatusMessageWebhook{
-				TypeWebhook:     "statusMessage",
-				WebhookUrl:      config.WebhookUrl,
-				CountTrySending: 0,
-				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
-					IdInstance: 0,
-					Wid:        cli.Store.ID.User + "@c.us",
-				},
-				Timestamp:     time.Now().Unix(),
-				StatusMessage: "read",
-			}
+			// обходим массив идентифкаторов сообщений
+			for _, idMessage := range evt.MessageIDs {
 
-			//отправляем вебхук
-			webhook.SendStatusMessage(statusMessageWebhook)
+				//создаем структуру вебхук о статусе сообщения
+				statusMessageWebhook := webhook.StatusMessageWebhook{
+					TypeWebhook:     "statusMessage",
+					WebhookUrl:      config.WebhookUrl,
+					CountTrySending: 0,
+					InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+						IdInstance: 0,
+						Wid:        cli.Store.ID.User + "@c.us",
+					},
+					Timestamp: time.Now().Unix(),
+					StatusMessage: webhook.DataStatusMessage{
+						IdMessage:       idMessage,
+						TimestampStatus: evt.Timestamp.Unix(),
+						Status:          "read",
+					},
+				}
+
+				//отправляем вебхук
+				webhook.SendStatusMessageWebhook(statusMessageWebhook)
+			}
 
 		} else if evt.Type == events.ReceiptTypeDelivered {
 
 			//выводим лог
 			log.Infof("%s was delivered to %s at %s", evt.MessageIDs[0], evt.SourceString(), evt.Timestamp)
 
-			//создаем структуру вебхук о статусе сообщения
-			statusMessageWebhook := webhook.StatusMessageWebhook{
-				TypeWebhook:     "statusMessage",
-				WebhookUrl:      config.WebhookUrl,
-				CountTrySending: 0,
-				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
-					IdInstance: 0,
-					Wid:        cli.Store.ID.User + "@c.us",
-				},
-				Timestamp:     time.Now().Unix(),
-				StatusMessage: "delivered",
-			}
+			// обходим массив идентифкаторов сообщений
+			for _, idMessage := range evt.MessageIDs {
 
-			//отправляем вебхук
-			webhook.SendStatusMessage(statusMessageWebhook)
+				//создаем структуру вебхук о статусе сообщения
+				statusMessageWebhook := webhook.StatusMessageWebhook{
+					TypeWebhook:     "statusMessage",
+					WebhookUrl:      config.WebhookUrl,
+					CountTrySending: 0,
+					InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+						IdInstance: 0,
+						Wid:        cli.Store.ID.User + "@c.us",
+					},
+					Timestamp: time.Now().Unix(),
+					StatusMessage: webhook.DataStatusMessage{
+						IdMessage:       idMessage,
+						TimestampStatus: evt.Timestamp.Unix(),
+						Status:          "delivered",
+					},
+				}
+
+				//отправляем вебхук
+				webhook.SendStatusMessageWebhook(statusMessageWebhook)
+			}
 		}
 	case *events.Presence:
 		if evt.Unavailable {
@@ -1130,11 +1178,15 @@ func sendMessage(ctx *gin.Context) {
 				IdInstance: 0,
 				Wid:        cli.Store.ID.User + "@c.us",
 			},
-			Timestamp:     time.Now().Unix(),
-			StatusMessage: "sent",
+			Timestamp: time.Now().Unix(),
+			StatusMessage: webhook.DataStatusMessage{
+				IdMessage:       resp.ID,
+				TimestampStatus: resp.Timestamp.Unix(),
+				Status:          "sent",
+			},
 		}
 
 		//отправляем вебхук
-		webhook.SendStatusMessage(statusMessageWebhook)
+		webhook.SendStatusMessageWebhook(statusMessageWebhook)
 	}
 }
