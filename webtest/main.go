@@ -9,8 +9,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow/webtest/properties"
 	"go.mau.fi/whatsmeow/webtest/webhook"
+	"go.mau.fi/whatsmeow/webtest/ws"
 	"io"
 	"mime"
 	"net/http"
@@ -23,7 +25,6 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/mdp/qrterminal/v3"
 	"google.golang.org/protobuf/proto"
 
 	"go.mau.fi/whatsmeow"
@@ -51,6 +52,21 @@ var config properties.Configuration
 
 // Стартовый метод
 func main() {
+
+	waBinary.IndentXML = true
+
+	flag.Parse()
+
+	if *debugLogs {
+		logLevel = "DEBUG"
+	}
+
+	if *requestFullSync {
+		store.DeviceProps.RequireFullSync = proto.Bool(true)
+	}
+	log = waLog.Stdout("Main", logLevel, true)
+
+	log.Infof("Run app")
 
 	// считываем файл кофигурации
 	content, err := os.ReadFile("config.json")
@@ -85,10 +101,14 @@ func main() {
 	//создаем экземпляр Engine
 	engine := gin.Default()
 
+	//websocket
+	engine.GET("/ws", wsHandle)
+
+	//маршрутизация запуска инстанса
+	engine.GET("/runInstance", runInstance)
+
 	//маршрутизация отправки сообщения
 	engine.POST("/sendMessage", sendMessage)
-
-	engine.GET("/runInstance", runInstance)
 
 	//запускаем сервер
 	err = engine.Run(config.Host)
@@ -747,7 +767,7 @@ func handler(rawEvt interface{}) {
 			}
 
 			// отправляем вебхук
-			webhook.SendNewMessageWebhook(newMessageWebhook)
+			webhook.SendNewMessageWebhook(newMessageWebhook, log)
 		}
 
 		if evt.Message.GetPollUpdateMessage() != nil {
@@ -812,7 +832,7 @@ func handler(rawEvt interface{}) {
 				}
 
 				//отправляем вебхук
-				webhook.SendStatusMessageWebhook(statusMessageWebhook)
+				webhook.SendStatusMessageWebhook(statusMessageWebhook, log)
 			}
 
 		} else if evt.Type == events.ReceiptTypeDelivered {
@@ -841,7 +861,7 @@ func handler(rawEvt interface{}) {
 				}
 
 				//отправляем вебхук
-				webhook.SendStatusMessageWebhook(statusMessageWebhook)
+				webhook.SendStatusMessageWebhook(statusMessageWebhook, log)
 			}
 		}
 	case *events.Presence:
@@ -908,21 +928,6 @@ func runInstance(ctx *gin.Context) {
 
 // Метод запускает инстанс
 func startInstance() {
-
-	waBinary.IndentXML = true
-
-	flag.Parse()
-
-	if *debugLogs {
-		logLevel = "DEBUG"
-	}
-
-	if *requestFullSync {
-
-		store.DeviceProps.RequireFullSync = proto.Bool(true)
-	}
-
-	log = waLog.Stdout("Main", logLevel, true)
 
 	dbLog := waLog.Stdout("Database", logLevel, true)
 
@@ -1187,6 +1192,31 @@ func sendMessage(ctx *gin.Context) {
 		}
 
 		//отправляем вебхук
-		webhook.SendStatusMessageWebhook(statusMessageWebhook)
+		webhook.SendStatusMessageWebhook(statusMessageWebhook, log)
 	}
+}
+
+// Метод обрабатывет сокет соединение
+func wsHandle(ctx *gin.Context) {
+
+	//Upgrade the HTTP protocol to the websocket protocol
+	conn, err := ws.Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+
+	// проверяем ошибку
+	if err != nil {
+
+		// отдаем ошибку
+		http.NotFound(ctx.Writer, ctx.Request)
+
+		// не продолжаем
+		return
+	}
+
+	// сохдаем клиент ws
+	client := &ws.Client{
+		Socket: conn,
+	}
+
+	//Start the message to collect the news from the web side
+	go client.Read() //статичный метод
 }

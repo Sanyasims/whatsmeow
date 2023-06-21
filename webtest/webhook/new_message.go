@@ -3,6 +3,7 @@ package webhook
 import (
 	"bytes"
 	"encoding/json"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"net/http"
 )
 
@@ -38,7 +39,7 @@ type DataWhatsappMessage struct {
 }
 
 // SendNewMessageWebhook Метод отправляет вебхук о новом входящем сообщении
-func SendNewMessageWebhook(newMessageWebhook NewMessageWebhook) {
+func SendNewMessageWebhook(newMessageWebhook NewMessageWebhook, log waLog.Logger) {
 
 	// сериализуем в JSON
 	postBody, err := json.Marshal(newMessageWebhook)
@@ -56,13 +57,29 @@ func SendNewMessageWebhook(newMessageWebhook NewMessageWebhook) {
 	// создаем тело запроса
 	responseBody := bytes.NewBuffer(postBody)
 
-	//отправляем запрос
-	_, err = http.Post(newMessageWebhook.WebhookUrl, "application/json", responseBody)
+	req, err := http.NewRequest("POST", newMessageWebhook.WebhookUrl, responseBody)
+
+	if err != nil {
+
+		// выводим лог
+		log.Errorf("Error NewRequest %v", err)
+
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "PostmanRuntime/7.32.3")
+
+	client := http.Client{}
+
+	res, err := client.Do(req)
 
 	// если ошибка
 	if err != nil {
 
 		// выводим лог
-		log.Errorf("Error send new incoming message webhook %v", err)
+		log.Errorf("Error send status message webhook %v", err)
 	}
+
+	log.Infof("Response status: %d", res.StatusCode)
 }

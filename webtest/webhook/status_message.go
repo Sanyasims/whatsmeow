@@ -3,12 +3,9 @@ package webhook
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
-
 	waLog "go.mau.fi/whatsmeow/util/log"
+	"net/http"
 )
-
-var log waLog.Logger
 
 // StatusMessageWebhook объект данных webhook о статусе сообщения
 type StatusMessageWebhook struct {
@@ -28,7 +25,7 @@ type DataStatusMessage struct {
 }
 
 // SendStatusMessageWebhook Метод отправляет вебхук о статусе сообщения
-func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook) {
+func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook, log waLog.Logger) {
 
 	// сериализуем в JSON
 	postBody, err := json.Marshal(statusMessageWebhook)
@@ -46,8 +43,22 @@ func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook) {
 	// создаем тело запроса
 	responseBody := bytes.NewBuffer(postBody)
 
-	//отправляем запрос
-	_, err = http.Post(statusMessageWebhook.WebhookUrl, "application/json", responseBody)
+	req, err := http.NewRequest("POST", statusMessageWebhook.WebhookUrl, responseBody)
+
+	if err != nil {
+
+		// выводим лог
+		log.Errorf("Error NewRequest %v", err)
+
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "PostmanRuntime/7.32.3")
+
+	client := http.Client{}
+
+	res, err := client.Do(req)
 
 	// если ошибка
 	if err != nil {
@@ -55,4 +66,6 @@ func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook) {
 		// выводим лог
 		log.Errorf("Error send status message webhook %v", err)
 	}
+
+	log.Infof("Response status: %d", res.StatusCode)
 }
