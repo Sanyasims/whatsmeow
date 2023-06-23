@@ -1218,5 +1218,5 @@ func wsHandle(ctx *gin.Context) {
 	}
 
 	//Start the message to collect the news from the web side
-	go client.Read() //статичный метод
+	go client.Read(log) //статичный метод
 }

@@ -6,8 +6,6 @@ import (
 	"net/http"
 )
 
-var log waLog.Logger
-
 // Upgrader обновитель сокет соединения
 var Upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024 * 1024 * 1024,
@@ -33,7 +31,7 @@ type Message struct {
 }
 
 // Define the read method of the client structure
-func (client *Client) Read() {
+func (client *Client) Read(log waLog.Logger) {
 
 	defer func() {
 		_ = client.Socket.Close()
