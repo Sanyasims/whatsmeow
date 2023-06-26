@@ -6,11 +6,11 @@ import (
 	"net/http"
 )
 
-// Upgrader обновитель сокет соединения
+// Upgrader обновляет HTTP протокол на websocket протокол
 var Upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024 * 1024 * 1024,
 	WriteBufferSize: 1024 * 1024 * 1024,
-	CheckOrigin: func(r *http.Request) bool { //Solving cross-domain problems
+	CheckOrigin: func(r *http.Request) bool { //Cors
 		return true
 	},
 }
@@ -18,50 +18,51 @@ var Upgrader = websocket.Upgrader{
 // Client ws клиент
 type Client struct {
 	Socket *websocket.Conn //Connected socket
+	Log    waLog.Logger
 }
 
-// Message into JSON
-type Message struct {
-	//Message Struct
-	Sender    string `json:"sender,omitempty"`    //发送者
-	Recipient string `json:"recipient,omitempty"` //接收者
-	Content   string `json:"content,omitempty"`   //内容
-	ServerIP  string `json:"serverIp,omitempty"`  //实际不需要 验证k8s
-	SenderIP  string `json:"senderIp,omitempty"`  //实际不需要 验证k8s
-}
+// Метод обрабатывает сокет соединение
+func (client *Client) Read() {
 
-// Define the read method of the client structure
-func (client *Client) Read(log waLog.Logger) {
-
+	// создаем отложенную функцию
 	defer func() {
+
+		//закрываем сокет соединение
 		_ = client.Socket.Close()
 	}()
 
 	for {
 
-		// read in a message
+		// считываем сообщение
 		messageType, p, err := client.Socket.ReadMessage()
 
+		// если ошибка
 		if err != nil {
 
-			log.Errorf("Error ReadMessage: ", err)
+			// выводим ошибку
+			client.Log.Errorf("Error ReadMessage: ", err)
 
+			// не продолжаем
 			return
 		}
 
 		// приводим сообщение в строку
 		message := string(p)
 
-		// print out that message for clarity
-		log.Infof(message)
+		// выводим лог с сообщением
+		client.Log.Infof(message)
 
+		// смотрим собщение
 		switch message {
-		case "__ping__":
+		case "__ping__": //если ping
 
+			// отправляем сообщение в ответ
 			if err := client.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
 
-				log.Errorf("Error WriteMessage: ", err)
+				// если есть ошибка, выводим ее
+				client.Log.Errorf("Error WriteMessage: ", err)
 
+				// не продолжаем
 				return
 			}
 		}
