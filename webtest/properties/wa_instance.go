@@ -118,7 +118,7 @@ func StartInstance() {
 	if err != nil {
 
 		// если аккаунт авторизован
-		if device.ID.User != "" && InstanceWa.WsQrClient.Socket != nil {
+		if device.ID.User != "" && InstanceWa.WsQrClient != nil && InstanceWa.WsQrClient.Socket != nil {
 
 			// создаем структу ws сообщения
 			dataWs := ws.DataWs{

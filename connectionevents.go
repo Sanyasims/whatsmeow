@@ -113,7 +113,7 @@ func (cli *Client) handleConnectSuccess(node *waBinary.Node) {
 	cli.Log.Infof("Successfully authenticated")
 
 	// если есть открытое сокет соединение
-	if cli.WsQrClient.Socket != nil {
+	if cli.WsQrClient != nil && cli.WsQrClient.Socket != nil {
 
 		// создаем структу ws сообщения
 		dataWs := ws.DataWs{
