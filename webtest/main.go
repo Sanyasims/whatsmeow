@@ -239,13 +239,13 @@ func wsHandle(ctx *gin.Context) {
 	}
 
 	// создаем клиент ws
-	client := &ws.Client{
+	clientWs := &ws.ClientWs{
 		Socket: conn,
 		Log:    properties.InstanceWa.Log,
 	}
 
 	// пишем клиента в инстанс
-	properties.InstanceWa.WsQrClient = *client
+	properties.InstanceWa.WsQrClient = *clientWs
 
 	// запускаем чтение ws
 	go properties.InstanceWa.WsQrClient.Read() //статичный метод

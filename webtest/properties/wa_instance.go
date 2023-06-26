@@ -48,7 +48,7 @@ type Instance struct {
 	HistorySyncID   int32
 	StartupTime     int64
 	Config          Configuration
-	WsQrClient      ws.Client
+	WsQrClient      ws.ClientWs
 }
 
 // StartInstance Метод запускает инстанс
@@ -81,7 +81,7 @@ func StartInstance() {
 	}
 
 	// слоздаем клиента
-	InstanceWa.Client = whatsmeow.NewClient(device, waLog.Stdout("Client", "DEBUG", true))
+	InstanceWa.Client = whatsmeow.NewClient(device, waLog.Stdout("ClientWs", "DEBUG", true))
 
 	var isWaitingForPair atomic.Bool
 
@@ -394,11 +394,11 @@ func handleCmd(cmd string, args []string) {
 		} else {
 			InstanceWa.Log.Debugf("Version data: %#v", resp)
 			if resp.ParsedVersion == store.GetWAVersion() {
-				InstanceWa.Log.Infof("Client is up to date")
+				InstanceWa.Log.Infof("ClientWs is up to date")
 			} else if store.GetWAVersion().LessThan(resp.ParsedVersion) {
-				InstanceWa.Log.Warnf("Client is outdated")
+				InstanceWa.Log.Warnf("ClientWs is outdated")
 			} else {
-				InstanceWa.Log.Infof("Client is newer than latest")
+				InstanceWa.Log.Infof("ClientWs is newer than latest")
 			}
 		}
 	case "subscribepresence":

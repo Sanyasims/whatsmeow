@@ -110,6 +110,28 @@ func (cli *Client) handleConnectFailure(node *waBinary.Node) {
 
 func (cli *Client) handleConnectSuccess(node *waBinary.Node) {
 	cli.Log.Infof("Successfully authenticated")
+
+	//// если есть открытое сокет соединение
+	//if cli.WsQrClient.Socket != nil {
+	//
+	//	// создаем структу ws сообщения
+	//	dataWs := ws.DataWs{
+	//		Type:     "account",
+	//		Pushname: cli.Store.PushName,
+	//		Wid:      cli.Store.ID.User + "@c.us",
+	//	}
+	//
+	//	// отправляем QR код в ws
+	//	if !cli.WsQrClient.Send(dataWs) {
+	//
+	//		// выводим ошибку
+	//		cli.Log.Errorf("Error send QR code to websocket")
+	//	}
+	//
+	//	// закрываем сокет соединение
+	//	cli.WsQrClient.Close()
+	//}
+
 	cli.LastSuccessfulConnect = time.Now()
 	cli.AutoReconnectErrors = 0
 	atomic.StoreUint32(&cli.isLoggedIn, 1)

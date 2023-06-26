@@ -15,8 +15,8 @@ var Upgrader = websocket.Upgrader{
 	},
 }
 
-// Client ws клиент
-type Client struct {
+// ClientWs ws клиент
+type ClientWs struct {
 	Socket *websocket.Conn //Connected socket
 	Log    waLog.Logger
 }
@@ -26,28 +26,30 @@ type DataWs struct {
 	Type        string `json:"type"`
 	ImageQrCode string `json:"imageQrCode"`
 	Reason      string `json:"reason"`
+	Pushname    string `json:"pushname"`
+	Wid         string `json:"wid"`
 }
 
 // Read Метод обрабатывает сокет соединение
-func (client *Client) Read() {
+func (clientWs *ClientWs) Read() {
 
 	// создаем отложенную функцию
 	defer func() {
 
 		//закрываем сокет соединение
-		client.Close()
+		clientWs.Close()
 	}()
 
 	for {
 
 		// считываем сообщение
-		messageType, p, err := client.Socket.ReadMessage()
+		messageType, p, err := clientWs.Socket.ReadMessage()
 
 		// если ошибка
 		if err != nil {
 
 			// выводим ошибку
-			client.Log.Errorf("Error ReadMessage: %v", err)
+			clientWs.Log.Errorf("Error ReadMessage: %v", err)
 
 			// не продолжаем
 			return
@@ -57,17 +59,17 @@ func (client *Client) Read() {
 		message := string(p)
 
 		// выводим лог с сообщением
-		client.Log.Infof(message)
+		clientWs.Log.Infof(message)
 
 		// смотрим собщение
 		switch message {
 		case "__ping__": //если ping
 
 			// отправляем сообщение в ответ
-			if err := client.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
+			if err := clientWs.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
 
 				// если есть ошибка, выводим ее
-				client.Log.Errorf("Error WriteMessage: %v", err)
+				clientWs.Log.Errorf("Error WriteMessage: %v", err)
 
 				// не продолжаем
 				return
@@ -77,23 +79,23 @@ func (client *Client) Read() {
 }
 
 // Send Метод отправляет сокет сообщение
-func (client *Client) Send(data DataWs) (success bool) {
+func (clientWs *ClientWs) Send(data DataWs) (success bool) {
 
 	// если ws не инициализирован
-	if client.Socket == nil {
+	if clientWs.Socket == nil {
 
 		// если есть ошибка, выводим ее
-		client.Log.Errorf("client.Socket is nil")
+		clientWs.Log.Errorf("clientWs.Socket is nil")
 
 		// отдаем не отправлено
 		return false
 	}
 
 	// отправляем сообщение в ответ
-	if err := client.Socket.WriteJSON(data); err != nil {
+	if err := clientWs.Socket.WriteJSON(data); err != nil {
 
 		// если есть ошибка, выводим ее
-		client.Log.Errorf("Error WriteMessage: %v", err)
+		clientWs.Log.Errorf("Error WriteMessage: %v", err)
 
 		// отдаем не отправлено
 		return false
@@ -104,14 +106,14 @@ func (client *Client) Send(data DataWs) (success bool) {
 }
 
 // Close Метод закрывает сокет сообщение
-func (client *Client) Close() {
+func (clientWs *ClientWs) Close() {
 
 	//закрываем сокет соединение
-	err := client.Socket.Close()
+	err := clientWs.Socket.Close()
 
 	if err != nil {
 
 		// если есть ошибка, выводим ее
-		client.Log.Errorf("Error WriteMessage: %v", err)
+		clientWs.Log.Errorf("Error WriteMessage: %v", err)
 	}
 }
