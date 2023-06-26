@@ -2,7 +2,7 @@ package ws
 
 import (
 	"github.com/gorilla/websocket"
-	waLog "go.mau.fi/whatsmeow/util/log"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	"net/http"
 )
 
@@ -17,8 +17,8 @@ var Upgrader = websocket.Upgrader{
 
 // Client ws клиент
 type Client struct {
-	Socket *websocket.Conn //Connected socket
-	Log    waLog.Logger
+	Socket     *websocket.Conn //Connected socket
+	InstanceWa properties.Instance
 }
 
 // Метод обрабатывает сокет соединение
@@ -40,7 +40,7 @@ func (client *Client) Read() {
 		if err != nil {
 
 			// выводим ошибку
-			client.Log.Errorf("Error ReadMessage: ", err)
+			client.InstanceWa.Log.Errorf("Error ReadMessage: ", err)
 
 			// не продолжаем
 			return
@@ -50,7 +50,7 @@ func (client *Client) Read() {
 		message := string(p)
 
 		// выводим лог с сообщением
-		client.Log.Infof(message)
+		client.InstanceWa.Log.Infof(message)
 
 		// смотрим собщение
 		switch message {
@@ -60,7 +60,7 @@ func (client *Client) Read() {
 			if err := client.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
 
 				// если есть ошибка, выводим ее
-				client.Log.Errorf("Error WriteMessage: ", err)
+				client.InstanceWa.Log.Errorf("Error WriteMessage: ", err)
 
 				// не продолжаем
 				return

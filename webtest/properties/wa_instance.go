@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow/webtest/webhook"
 	"mime"
 	"net/http"
@@ -22,6 +21,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"google.golang.org/protobuf/proto"
 
+	qrcode "github.com/skip2/go-qrcode"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/appstate"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -124,7 +124,24 @@ func StartInstance() {
 
 				if evt.Event == "code" {
 
-					qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+					// создаем буфер для байт QR кода
+					var png []byte
+
+					// создаем изображение QR кода
+					png, err := qrcode.Encode(evt.Code, qrcode.Medium, 256)
+
+					// если ошибка
+					if err != nil {
+
+						// выводим ошитбку
+						InstanceWa.Log.Errorf("QR string: %v", err)
+
+						// не продолжаем
+						return
+					}
+
+					// TODO
+					fmt.Print(png)
 
 				} else {
 
