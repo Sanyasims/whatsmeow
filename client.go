@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"go.mau.fi/whatsmeow/webtest/ws"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -135,6 +136,8 @@ type Client struct {
 
 	proxy socket.Proxy
 	http  *http.Client
+
+	WsQrClient *ws.ClientWs
 }
 
 // Size of buffer for the channel that all incoming XML nodes go through.

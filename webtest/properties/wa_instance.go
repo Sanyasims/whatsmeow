@@ -48,7 +48,7 @@ type Instance struct {
 	HistorySyncID   int32
 	StartupTime     int64
 	Config          Configuration
-	WsQrClient      ws.ClientWs
+	WsQrClient      *ws.ClientWs
 }
 
 // StartInstance Метод запускает инстанс
@@ -80,8 +80,11 @@ func StartInstance() {
 		return
 	}
 
-	// слоздаем клиента
+	// создаем клиента
 	InstanceWa.Client = whatsmeow.NewClient(device, waLog.Stdout("ClientWs", "DEBUG", true))
+
+	//передаем ссылку на WsClient
+	InstanceWa.Client.WsQrClient = InstanceWa.WsQrClient
 
 	var isWaitingForPair atomic.Bool
 

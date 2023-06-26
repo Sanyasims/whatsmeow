@@ -245,7 +245,7 @@ func wsHandle(ctx *gin.Context) {
 	}
 
 	// пишем клиента в инстанс
-	properties.InstanceWa.WsQrClient = *clientWs
+	properties.InstanceWa.WsQrClient = clientWs
 
 	// запускаем чтение ws
 	go properties.InstanceWa.WsQrClient.Read() //статичный метод
