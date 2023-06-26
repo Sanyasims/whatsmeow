@@ -57,7 +57,7 @@ func main() {
 	if err != nil {
 
 		// логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error when opening config file: ", err)
+		properties.InstanceWa.Log.Errorf("Error when opening config file: %v", err)
 
 		// не продолжаем
 		return
@@ -70,7 +70,7 @@ func main() {
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error during parse Configuration: ", err)
+		properties.InstanceWa.Log.Errorf("Error during parse Configuration: %v", err)
 
 		//не продолжаем
 		return
@@ -124,8 +124,9 @@ func sendMessage(ctx *gin.Context) {
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error read body request: ", err)
+		properties.InstanceWa.Log.Errorf("Error read body request: %v", err)
 
+		// отдаем ответ
 		ctx.JSON(400, gin.H{
 			"reason": "Bad request data",
 		})
@@ -144,8 +145,9 @@ func sendMessage(ctx *gin.Context) {
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: ", err)
+		properties.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
 
+		// отдаем ответ
 		ctx.JSON(400, gin.H{
 			"reason": "Bad request data",
 		})
@@ -159,8 +161,10 @@ func sendMessage(ctx *gin.Context) {
 	// парсим идентифкатор Whatsapp, если chatId то его
 	recipient, ok := properties.ParseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
 
+	// если не ок
 	if !ok {
 
+		// отдаем ответ
 		ctx.JSON(400, gin.H{
 			"reason": "Bad request data",
 		})
@@ -169,22 +173,29 @@ func sendMessage(ctx *gin.Context) {
 		return
 	}
 
+	// кодируем сообщение
 	msg := &waProto.Message{Conversation: proto.String(requestSendMessage.Message)}
 
+	// отправляем сообщение
 	resp, err := properties.InstanceWa.Client.SendMessage(context.Background(), recipient, msg)
 
+	// если есть ошибка
 	if err != nil {
 
+		// выводим ошибку
 		properties.InstanceWa.Log.Errorf("Error sending message: %v", err)
 
+		// отдаем ответ
 		ctx.JSON(500, gin.H{
 			"reason": "Error sending message",
 		})
 
 	} else {
 
+		//выводим лог
 		properties.InstanceWa.Log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
 
+		// отдаем ответ
 		ctx.JSON(200, gin.H{
 			"id": resp.ID,
 		})
@@ -238,4 +249,7 @@ func wsHandle(ctx *gin.Context) {
 
 	// запускаем чтение ws
 	go properties.InstanceWa.WsQrClient.Read() //статичный метод
+
+	// запускаем инстанс в отдельном потоке
+	go properties.StartInstance()
 }

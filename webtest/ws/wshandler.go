@@ -35,7 +35,7 @@ func (client *Client) Read() {
 	defer func() {
 
 		//закрываем сокет соединение
-		_ = client.Socket.Close()
+		client.Close()
 	}()
 
 	for {
@@ -47,7 +47,7 @@ func (client *Client) Read() {
 		if err != nil {
 
 			// выводим ошибку
-			client.Log.Errorf("Error ReadMessage: ", err)
+			client.Log.Errorf("Error ReadMessage: %v", err)
 
 			// не продолжаем
 			return
@@ -67,7 +67,7 @@ func (client *Client) Read() {
 			if err := client.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
 
 				// если есть ошибка, выводим ее
-				client.Log.Errorf("Error WriteMessage: ", err)
+				client.Log.Errorf("Error WriteMessage: %v", err)
 
 				// не продолжаем
 				return
@@ -93,11 +93,25 @@ func (client *Client) Send(data DataWs) (success bool) {
 	if err := client.Socket.WriteJSON(data); err != nil {
 
 		// если есть ошибка, выводим ее
-		client.Log.Errorf("Error WriteMessage: ", err)
+		client.Log.Errorf("Error WriteMessage: %v", err)
 
 		// отдаем не отправлено
 		return false
 	}
 
+	// отдаем отправлено
 	return true
+}
+
+// Close Метод закрывает сокет сообщение
+func (client *Client) Close() {
+
+	//закрываем сокет соединение
+	err := client.Socket.Close()
+
+	if err != nil {
+
+		// если есть ошибка, выводим ее
+		client.Log.Errorf("Error WriteMessage: %v", err)
+	}
 }

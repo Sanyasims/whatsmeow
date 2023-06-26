@@ -114,6 +114,26 @@ func StartInstance() {
 
 	if err != nil {
 
+		// если аккаунт авторизован
+		if device.ID.User != "" && InstanceWa.WsQrClient.Socket != nil {
+
+			// создаем структу ws сообщения
+			dataWs := ws.DataWs{
+				Type:   "error",
+				Reason: "Instance already authorized",
+			}
+
+			// отправляем QR код в ws
+			if !InstanceWa.WsQrClient.Send(dataWs) {
+
+				// выводим ошибку
+				InstanceWa.Log.Errorf("Error send QR code to websocket")
+			}
+
+			// закрываем сокет соединение
+			InstanceWa.WsQrClient.Close()
+		}
+
 		// This error means that we're already logged in, so ignore it.
 		if !errors.Is(err, whatsmeow.ErrQRStoreContainsID) {
 
@@ -143,6 +163,7 @@ func StartInstance() {
 						return
 					}
 
+					// создаем структу ws сообщения
 					dataWs := ws.DataWs{
 						Type:        "qr",
 						ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
@@ -158,8 +179,30 @@ func StartInstance() {
 						return
 					}
 
+				} else if evt.Event == "timeout" {
+
+					// создаем структу ws сообщения
+					dataWs := ws.DataWs{
+						Type:   "error",
+						Reason: "QR code was not scanned in the required time",
+					}
+
+					// отправляем QR код в ws
+					if !InstanceWa.WsQrClient.Send(dataWs) {
+
+						// выводим ошибку
+						InstanceWa.Log.Errorf("Error send QR code to websocket")
+
+						// не продолжаем
+						return
+					}
+
+					// закрываем сокет соединение
+					InstanceWa.WsQrClient.Close()
+
 				} else {
 
+					// выводим лог
 					InstanceWa.Log.Infof("QR channel result: %s", evt.Event)
 				}
 			}
