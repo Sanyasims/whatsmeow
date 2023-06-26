@@ -3,11 +3,13 @@ package properties
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"go.mau.fi/whatsmeow/webtest/webhook"
+	"go.mau.fi/whatsmeow/webtest/ws"
 	"mime"
 	"net/http"
 	"os"
@@ -46,6 +48,7 @@ type Instance struct {
 	HistorySyncID   int32
 	StartupTime     int64
 	Config          Configuration
+	WsQrClient      ws.Client
 }
 
 // StartInstance Метод запускает инстанс
@@ -128,7 +131,7 @@ func StartInstance() {
 					var png []byte
 
 					// создаем изображение QR кода
-					png, err := qrcode.Encode(evt.Code, qrcode.Medium, 256)
+					png, err := qrcode.Encode(evt.Code, qrcode.Medium, 264)
 
 					// если ошибка
 					if err != nil {
@@ -140,8 +143,20 @@ func StartInstance() {
 						return
 					}
 
-					// TODO
-					fmt.Print(png)
+					dataWs := ws.DataWs{
+						Type:        "qr",
+						ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
+					}
+
+					// отправляем QR код в ws
+					if !InstanceWa.WsQrClient.Send(dataWs) {
+
+						// выводим ошитбку
+						InstanceWa.Log.Errorf("Error send QR code to websocket")
+
+						// не продолжаем
+						return
+					}
 
 				} else {
 

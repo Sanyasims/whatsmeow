@@ -2,7 +2,7 @@ package ws
 
 import (
 	"github.com/gorilla/websocket"
-	"go.mau.fi/whatsmeow/webtest/properties"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"net/http"
 )
 
@@ -17,11 +17,18 @@ var Upgrader = websocket.Upgrader{
 
 // Client ws клиент
 type Client struct {
-	Socket     *websocket.Conn //Connected socket
-	InstanceWa properties.Instance
+	Socket *websocket.Conn //Connected socket
+	Log    waLog.Logger
 }
 
-// Метод обрабатывает сокет соединение
+// DataWs данные ws сообщения
+type DataWs struct {
+	Type        string `json:"type"`
+	ImageQrCode string `json:"imageQrCode"`
+	Reason      string `json:"reason"`
+}
+
+// Read Метод обрабатывает сокет соединение
 func (client *Client) Read() {
 
 	// создаем отложенную функцию
@@ -40,7 +47,7 @@ func (client *Client) Read() {
 		if err != nil {
 
 			// выводим ошибку
-			client.InstanceWa.Log.Errorf("Error ReadMessage: ", err)
+			client.Log.Errorf("Error ReadMessage: ", err)
 
 			// не продолжаем
 			return
@@ -50,7 +57,7 @@ func (client *Client) Read() {
 		message := string(p)
 
 		// выводим лог с сообщением
-		client.InstanceWa.Log.Infof(message)
+		client.Log.Infof(message)
 
 		// смотрим собщение
 		switch message {
@@ -60,11 +67,37 @@ func (client *Client) Read() {
 			if err := client.Socket.WriteMessage(messageType, []byte("__pong__")); err != nil {
 
 				// если есть ошибка, выводим ее
-				client.InstanceWa.Log.Errorf("Error WriteMessage: ", err)
+				client.Log.Errorf("Error WriteMessage: ", err)
 
 				// не продолжаем
 				return
 			}
 		}
 	}
+}
+
+// Send Метод отправляет сокет сообщение
+func (client *Client) Send(data DataWs) (success bool) {
+
+	// если ws не инициализирован
+	if client.Socket == nil {
+
+		// если есть ошибка, выводим ее
+		client.Log.Errorf("client.Socket is nil")
+
+		// отдаем не отправлено
+		return false
+	}
+
+	// отправляем сообщение в ответ
+	if err := client.Socket.WriteJSON(data); err != nil {
+
+		// если есть ошибка, выводим ее
+		client.Log.Errorf("Error WriteMessage: ", err)
+
+		// отдаем не отправлено
+		return false
+	}
+
+	return true
 }
