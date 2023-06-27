@@ -258,5 +258,12 @@ func (c *Container) DeleteDevice(store *store.Device) error {
 		return ErrDeviceIDMustBeSet
 	}
 	_, err := c.db.Exec(deleteDeviceQuery, store.ID.String())
+
+	if err != nil {
+		return err
+	}
+
+	_, err = c.db.Exec(deletePrivacyToken, store.ID.String())
+
 	return err
 }
