@@ -1,4 +1,4 @@
-package properties
+package wainstance
 
 import (
 	"bufio"
@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.mau.fi/whatsmeow/socket"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	"go.mau.fi/whatsmeow/webtest/webhook"
 	"go.mau.fi/whatsmeow/webtest/ws"
 	"mime"
@@ -47,12 +49,12 @@ type Instance struct {
 	PairRejectChan  chan bool
 	HistorySyncID   int32
 	StartupTime     int64
-	Config          Configuration
+	Config          properties.Configuration
 	WsQrClient      *ws.ClientWs
 }
 
 // StartInstance Метод запускает инстанс
-func StartInstance() {
+func StartInstance(proxy socket.Proxy, onlyIfAuth bool) {
 
 	// создаем хранилище инстанса
 	storeContainer, err := sqlstore.New(*InstanceWa.DbDialect, *InstanceWa.DbAddress, InstanceWa.DbLog)
@@ -75,6 +77,15 @@ func StartInstance() {
 
 		// выводим ошибку
 		InstanceWa.Log.Errorf("Failed to get device: %v", err)
+
+		// не продолжаем
+		return
+	}
+
+	if (device.ID == nil || device.ID.User == "") && onlyIfAuth {
+
+		// выводим ошибку
+		InstanceWa.Log.Infof("Instance not authorized")
 
 		// не продолжаем
 		return
@@ -166,42 +177,50 @@ func StartInstance() {
 						return
 					}
 
-					// создаем структу ws сообщения
-					dataWs := ws.DataWs{
-						Type:        "qr",
-						ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
-					}
+					// если инциализировано сокет соединение
+					if InstanceWa.WsQrClient != nil {
 
-					// отправляем QR код в ws
-					if !InstanceWa.WsQrClient.Send(dataWs) {
+						// создаем структу ws сообщения
+						dataWs := ws.DataWs{
+							Type:        "qr",
+							ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
+						}
 
-						// выводим ошитбку
-						InstanceWa.Log.Errorf("Error send QR code to websocket")
+						// отправляем QR код в ws
+						if !InstanceWa.WsQrClient.Send(dataWs) {
 
-						// не продолжаем
-						return
+							// выводим ошитбку
+							InstanceWa.Log.Errorf("Error send QR code to websocket")
+
+							// не продолжаем
+							return
+						}
 					}
 
 				} else if evt.Event == "timeout" {
 
-					// создаем структу ws сообщения
-					dataWs := ws.DataWs{
-						Type:   "error",
-						Reason: "QR code was not scanned in the required time",
+					// если инциализировано сокет соединение
+					if InstanceWa.WsQrClient != nil {
+
+						// создаем структу ws сообщения
+						dataWs := ws.DataWs{
+							Type:   "error",
+							Reason: "QR code was not scanned in the required time",
+						}
+
+						// отправляем QR код в ws
+						if !InstanceWa.WsQrClient.Send(dataWs) {
+
+							// выводим ошибку
+							InstanceWa.Log.Errorf("Error send QR code to websocket")
+
+							// не продолжаем
+							return
+						}
+
+						// закрываем сокет соединение
+						InstanceWa.WsQrClient.Close()
 					}
-
-					// отправляем QR код в ws
-					if !InstanceWa.WsQrClient.Send(dataWs) {
-
-						// выводим ошибку
-						InstanceWa.Log.Errorf("Error send QR code to websocket")
-
-						// не продолжаем
-						return
-					}
-
-					// закрываем сокет соединение
-					InstanceWa.WsQrClient.Close()
 
 				} else {
 
@@ -213,19 +232,6 @@ func StartInstance() {
 	}
 
 	InstanceWa.Client.AddEventHandler(handler)
-
-	// получаем прокси
-	proxy, err := InstanceWa.Config.GetProxy()
-
-	// если ошибка
-	if err != nil {
-
-		// логируем ошибку
-		InstanceWa.Log.Errorf("Failed get proxy from config: %v", err)
-
-		// не продолжаем
-		return
-	}
 
 	// устанавливаем прокси
 	InstanceWa.Client.SetProxy(proxy)

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"github.com/gin-gonic/gin"
 	"go.mau.fi/whatsmeow/webtest/properties"
+	"go.mau.fi/whatsmeow/webtest/wainstance"
 	"go.mau.fi/whatsmeow/webtest/webhook"
 	"go.mau.fi/whatsmeow/webtest/ws"
 	"io"
@@ -27,7 +28,7 @@ import (
 func main() {
 
 	// создаем instance
-	properties.InstanceWa = properties.Instance{
+	wainstance.InstanceWa = wainstance.Instance{
 		Log:             waLog.Stdout("Main", "DEBUG", true),
 		DbLog:           waLog.Stdout("Database", "DEBUG", true),
 		DebugLogs:       flag.Bool("debug", true, "Enable debug logs?"),
@@ -43,12 +44,12 @@ func main() {
 
 	flag.Parse()
 
-	if *properties.InstanceWa.RequestFullSync {
+	if *wainstance.InstanceWa.RequestFullSync {
 
 		store.DeviceProps.RequireFullSync = proto.Bool(true)
 	}
 
-	properties.InstanceWa.Log.Infof("Run app")
+	wainstance.InstanceWa.Log.Infof("Run app")
 
 	// считываем файл кофигурации
 	content, err := os.ReadFile("config.json")
@@ -57,20 +58,20 @@ func main() {
 	if err != nil {
 
 		// логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error when opening config file: %v", err)
+		wainstance.InstanceWa.Log.Errorf("Error when opening config file: %v", err)
 
 		// не продолжаем
 		return
 	}
 
 	// лесериализуем из JSON
-	err = json.Unmarshal(content, &properties.InstanceWa.Config)
+	err = json.Unmarshal(content, &wainstance.InstanceWa.Config)
 
 	// если есть ошибка
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error during parse Configuration: %v", err)
+		wainstance.InstanceWa.Log.Errorf("Error during parse Configuration: %v", err)
 
 		//не продолжаем
 		return
@@ -79,23 +80,26 @@ func main() {
 	//создаем экземпляр Engine
 	engine := gin.Default()
 
+	//маршрутизация запуска инстанса
+	engine.GET("/runInstance", runInstance)
+
 	//websocket
 	engine.GET("/ws", wsHandle)
 
-	//маршрутизация запуска инстанса
-	engine.GET("/runInstance", runInstance)
+	// метод получает QR код авторизации GET запросом
+	engine.GET("getQrCode", getQrCode)
 
 	//маршрутизация отправки сообщения
 	engine.POST("/sendMessage", sendMessage)
 
 	//запускаем сервер
-	err = engine.Run(properties.InstanceWa.Config.Host)
+	err = engine.Run(wainstance.InstanceWa.Config.Host)
 
 	//если есть ошибка
 	if err != nil {
 
 		//выводим лог
-		properties.InstanceWa.Log.Errorf("Failed to start server: %v", err)
+		wainstance.InstanceWa.Log.Errorf("Failed to start server: %v", err)
 
 		//не продолжаем
 		return
@@ -105,18 +109,6 @@ func main() {
 // Метод запускает инстанс
 func runInstance(ctx *gin.Context) {
 
-	// запускаем инстанс в отдельном потоке
-	go properties.StartInstance()
-
-	// отдаем ответ
-	ctx.JSON(200, gin.H{
-		"success": true,
-	})
-}
-
-// Метод отправляет сообщение
-func sendMessage(ctx *gin.Context) {
-
 	// считываем тело запроса
 	content, err := io.ReadAll(ctx.Request.Body)
 
@@ -124,7 +116,7 @@ func sendMessage(ctx *gin.Context) {
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error read body request: %v", err)
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
 
 		// отдаем ответ
 		ctx.JSON(400, gin.H{
@@ -135,17 +127,17 @@ func sendMessage(ctx *gin.Context) {
 		return
 	}
 
-	// объявляем структуру отправки текстового сообщения
-	var requestSendMessage properties.RequestSendMessage
+	// объявляем структуру запроса запуска инстанса
+	var requestRunInstance properties.RequestRunInstance
 
 	// лесериализуем из JSON
-	err = json.Unmarshal(content, &requestSendMessage)
+	err = json.Unmarshal(content, &requestRunInstance)
 
 	// если есть ошибка
 	if err != nil {
 
 		//логируем ошибку
-		properties.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestRunInstance: %v", err)
 
 		// отдаем ответ
 		ctx.JSON(400, gin.H{
@@ -156,70 +148,46 @@ func sendMessage(ctx *gin.Context) {
 		return
 	}
 
-	//TODO проверять валидность данных
+	// если не указано прокси
+	if requestRunInstance.Proxy == "" {
 
-	// парсим идентифкатор Whatsapp, если chatId то его
-	recipient, ok := properties.ParseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
-
-	// если не ок
-	if !ok {
+		//логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Missing proxy RequestRunInstance: %v", err)
 
 		// отдаем ответ
 		ctx.JSON(400, gin.H{
-			"reason": "Bad request data",
+			"reason": "Missing proxy",
 		})
 
-		//отдаем
+		//не продолжаем
 		return
 	}
 
-	// кодируем сообщение
-	msg := &waProto.Message{Conversation: proto.String(requestSendMessage.Message)}
+	// получаем прокси из строки
+	proxy, err := properties.GetProxy(requestRunInstance.Proxy)
 
-	// отправляем сообщение
-	resp, err := properties.InstanceWa.Client.SendMessage(context.Background(), recipient, msg)
-
-	// если есть ошибка
+	// если есть ошиька
 	if err != nil {
 
-		// выводим ошибку
-		properties.InstanceWa.Log.Errorf("Error sending message: %v", err)
+		//логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error get proxy from string: %v", err)
 
 		// отдаем ответ
-		ctx.JSON(500, gin.H{
-			"reason": "Error sending message",
+		ctx.JSON(400, gin.H{
+			"reason": err.Error(),
 		})
 
-	} else {
-
-		//выводим лог
-		properties.InstanceWa.Log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
-
-		// отдаем ответ
-		ctx.JSON(200, gin.H{
-			"id": resp.ID,
-		})
-
-		//создаем структуру вебхук о статусе сообщения
-		statusMessageWebhook := webhook.StatusMessageWebhook{
-			TypeWebhook:     "statusMessage",
-			WebhookUrl:      properties.InstanceWa.Config.WebhookUrl,
-			CountTrySending: 0,
-			InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
-				IdInstance: 0,
-				Wid:        properties.InstanceWa.Client.Store.ID.User + "@c.us",
-			},
-			Timestamp: time.Now().Unix(),
-			StatusMessage: webhook.DataStatusMessage{
-				IdMessage:       resp.ID,
-				TimestampStatus: resp.Timestamp.Unix(),
-				Status:          "sent",
-			},
-		}
-
-		//отправляем вебхук
-		webhook.SendStatusMessageWebhook(statusMessageWebhook, properties.InstanceWa.Log)
+		//не продолжаем
+		return
 	}
+
+	// запускаем инстанс в отдельном потоке
+	go wainstance.StartInstance(proxy, true)
+
+	// отдаем ответ
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
 }
 
 // Метод обрабатывет сокет соединение
@@ -241,15 +209,162 @@ func wsHandle(ctx *gin.Context) {
 	// создаем клиент ws
 	clientWs := &ws.ClientWs{
 		Socket: conn,
-		Log:    properties.InstanceWa.Log,
+		Log:    wainstance.InstanceWa.Log,
 	}
 
 	// пишем клиента в инстанс
-	properties.InstanceWa.WsQrClient = clientWs
+	wainstance.InstanceWa.WsQrClient = clientWs
+
+	// получаем параметр прокси
+	query, ok := ctx.GetQuery("proxy")
+
+	//если не ок или нет параметра
+	if !ok || query == "" {
+
+		wainstance.InstanceWa.WsQrClient.Send(ws.DataWs{
+			Type:   "error",
+			Reason: "Missing proxy",
+		})
+
+		wainstance.InstanceWa.WsQrClient.Close()
+
+		//не продолжаем
+		return
+	}
+
+	// получаем прокси из строки
+	proxy, err := properties.GetProxy(query)
+
+	// если есть ошибка
+	if err != nil {
+
+		wainstance.InstanceWa.WsQrClient.Send(ws.DataWs{
+			Type:   "error",
+			Reason: "Error get proxy from string",
+		})
+
+		wainstance.InstanceWa.WsQrClient.Close()
+
+		//не продолжаем
+		return
+	}
 
 	// запускаем чтение ws
-	go properties.InstanceWa.WsQrClient.Read() //статичный метод
+	go wainstance.InstanceWa.WsQrClient.Read() //статичный метод
 
 	// запускаем инстанс в отдельном потоке
-	go properties.StartInstance()
+	go wainstance.StartInstance(proxy, false)
+}
+
+// wsHandle получает QR код авторизации GET запросом
+func getQrCode(ctx *gin.Context) {
+
+}
+
+// Метод отправляет сообщение
+func sendMessage(ctx *gin.Context) {
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		//не продолжаем
+		return
+	}
+
+	// объявляем структуру отправки текстового сообщения
+	var requestSendMessage properties.RequestSendMessage
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestSendMessage)
+
+	// если есть ошибка
+	if err != nil {
+
+		//логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		//не продолжаем
+		return
+	}
+
+	//TODO проверять валидность данных
+
+	// парсим идентифкатор Whatsapp, если chatId то его
+	recipient, ok := wainstance.ParseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
+
+	// если не ок
+	if !ok {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		//отдаем
+		return
+	}
+
+	// кодируем сообщение
+	msg := &waProto.Message{Conversation: proto.String(requestSendMessage.Message)}
+
+	// отправляем сообщение
+	resp, err := wainstance.InstanceWa.Client.SendMessage(context.Background(), recipient, msg)
+
+	// если есть ошибка
+	if err != nil {
+
+		// выводим ошибку
+		wainstance.InstanceWa.Log.Errorf("Error sending message: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(500, gin.H{
+			"reason": "Error sending message",
+		})
+
+	} else {
+
+		//выводим лог
+		wainstance.InstanceWa.Log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
+
+		// отдаем ответ
+		ctx.JSON(200, gin.H{
+			"id": resp.ID,
+		})
+
+		//создаем структуру вебхук о статусе сообщения
+		statusMessageWebhook := webhook.StatusMessageWebhook{
+			TypeWebhook:     "statusMessage",
+			WebhookUrl:      wainstance.InstanceWa.Config.WebhookUrl,
+			CountTrySending: 0,
+			InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
+				IdInstance: 0,
+				Wid:        wainstance.InstanceWa.Client.Store.ID.User + "@c.us",
+			},
+			Timestamp: time.Now().Unix(),
+			StatusMessage: webhook.DataStatusMessage{
+				IdMessage:       resp.ID,
+				TimestampStatus: resp.Timestamp.Unix(),
+				Status:          "sent",
+			},
+		}
+
+		//отправляем вебхук
+		webhook.SendStatusMessageWebhook(statusMessageWebhook, wainstance.InstanceWa.Log)
+	}
 }

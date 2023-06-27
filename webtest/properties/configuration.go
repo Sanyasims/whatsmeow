@@ -11,22 +11,21 @@ import (
 // Configuration Структура конфигурации
 type Configuration struct {
 	Host       string `json:"host"`
-	Proxy      string `json:"proxy"`
 	WebhookUrl string `json:"webhookUrl"`
 }
 
-// GetProxy метод получает прокси из конфинурации
-func (config Configuration) GetProxy() (socket.Proxy, error) {
+// GetProxy метод получает прокси из строки
+func GetProxy(proxy string) (socket.Proxy, error) {
 
 	// проверяем входящие данные
-	if config.Proxy == "" {
+	if proxy == "" {
 
 		// отдаем ошибку
 		return nil, fmt.Errorf("proxy is empty")
 	}
 
 	// разбиваем строку прокси
-	parts := strings.Split(config.Proxy, ":")
+	parts := strings.Split(proxy, ":")
 
 	// если не 4 части
 	if len(parts) != 4 {

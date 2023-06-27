@@ -1,5 +1,10 @@
 package properties
 
+// RequestRunInstance структура запроса запуска инстанса
+type RequestRunInstance struct {
+	Proxy string `json:"proxy"`
+}
+
 // RequestSendMessage Структура отправки текстового сообщения
 type RequestSendMessage struct {
 	ChatId          string `json:"chatId"`

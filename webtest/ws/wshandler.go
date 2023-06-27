@@ -82,7 +82,7 @@ func (clientWs *ClientWs) Read() {
 func (clientWs *ClientWs) Send(data DataWs) (success bool) {
 
 	// если ws не инициализирован
-	if clientWs.Socket == nil {
+	if clientWs == nil || clientWs.Socket == nil {
 
 		// если есть ошибка, выводим ее
 		clientWs.Log.Errorf("clientWs.Socket is nil")
