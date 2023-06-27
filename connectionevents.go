@@ -112,29 +112,29 @@ func (cli *Client) handleConnectFailure(node *waBinary.Node) {
 func (cli *Client) handleConnectSuccess(node *waBinary.Node) {
 	cli.Log.Infof("Successfully authenticated")
 
+	// создаем структу ws сообщения
+	cli.AuthMessage = &ws.AuthMessage{
+		Type:     "account",
+		Pushname: cli.Store.PushName,
+		Wid:      cli.Store.ID.User + "@c.us",
+	}
+
+	// если есть PushName
+	if cli.Store.PushName != "" {
+
+		// отдаем его
+		cli.AuthMessage.Pushname = cli.Store.PushName
+	} else if cli.Store.BusinessName != "" { //если есть BusinessName
+
+		// отдаем его
+		cli.AuthMessage.Pushname = cli.Store.BusinessName
+	}
+
 	// если есть открытое сокет соединение
 	if cli.WsQrClient != nil && cli.WsQrClient.Socket != nil {
 
-		// создаем структу ws сообщения
-		dataWs := ws.DataWs{
-			Type:     "account",
-			Pushname: cli.Store.PushName,
-			Wid:      cli.Store.ID.User + "@c.us",
-		}
-
-		// если есть PushName
-		if cli.Store.PushName != "" {
-
-			// отдаем его
-			dataWs.Pushname = cli.Store.PushName
-		} else if cli.Store.BusinessName != "" { //если есть BusinessName
-
-			// отдаем его
-			dataWs.Pushname = cli.Store.BusinessName
-		}
-
 		// отправляем QR код в ws
-		if !cli.WsQrClient.Send(dataWs) {
+		if !cli.WsQrClient.Send(*cli.AuthMessage) {
 
 			// выводим ошибку
 			cli.Log.Errorf("Error send QR code to websocket")

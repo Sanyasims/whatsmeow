@@ -138,6 +138,8 @@ type Client struct {
 	http  *http.Client
 
 	WsQrClient *ws.ClientWs
+
+	AuthMessage *ws.AuthMessage
 }
 
 // Size of buffer for the channel that all incoming XML nodes go through.

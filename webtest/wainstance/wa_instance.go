@@ -129,23 +129,27 @@ func StartInstance(proxy socket.Proxy, onlyIfAuth bool) {
 	if err != nil {
 
 		// если аккаунт авторизован
-		if device.ID.User != "" && InstanceWa.WsQrClient != nil && InstanceWa.WsQrClient.Socket != nil {
+		if device.ID.User != "" {
 
 			// создаем структу ws сообщения
-			dataWs := ws.DataWs{
+			InstanceWa.Client.AuthMessage = &ws.AuthMessage{
 				Type:   "error",
 				Reason: "Instance already authorized",
 			}
 
-			// отправляем QR код в ws
-			if !InstanceWa.WsQrClient.Send(dataWs) {
+			// если есть сокет сообщение
+			if InstanceWa.WsQrClient != nil && InstanceWa.WsQrClient.Socket != nil {
 
-				// выводим ошибку
-				InstanceWa.Log.Errorf("Error send QR code to websocket")
+				// отправляем QR код в ws
+				if !InstanceWa.WsQrClient.Send(*InstanceWa.Client.AuthMessage) {
+
+					// выводим ошибку
+					InstanceWa.Log.Errorf("Error send QR code to websocket")
+				}
+
+				// закрываем сокет соединение
+				InstanceWa.WsQrClient.Close()
 			}
-
-			// закрываем сокет соединение
-			InstanceWa.WsQrClient.Close()
 		}
 
 		// This error means that we're already logged in, so ignore it.
@@ -177,17 +181,17 @@ func StartInstance(proxy socket.Proxy, onlyIfAuth bool) {
 						return
 					}
 
+					// создаем структу ws сообщения
+					InstanceWa.Client.AuthMessage = &ws.AuthMessage{
+						Type:        "qr",
+						ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
+					}
+
 					// если инциализировано сокет соединение
 					if InstanceWa.WsQrClient != nil {
 
-						// создаем структу ws сообщения
-						dataWs := ws.DataWs{
-							Type:        "qr",
-							ImageQrCode: "data:image/png;base64, " + base64.StdEncoding.EncodeToString(png),
-						}
-
 						// отправляем QR код в ws
-						if !InstanceWa.WsQrClient.Send(dataWs) {
+						if !InstanceWa.WsQrClient.Send(*InstanceWa.Client.AuthMessage) {
 
 							// выводим ошитбку
 							InstanceWa.Log.Errorf("Error send QR code to websocket")
@@ -199,17 +203,17 @@ func StartInstance(proxy socket.Proxy, onlyIfAuth bool) {
 
 				} else if evt.Event == "timeout" {
 
+					// создаем структу ws сообщения
+					InstanceWa.Client.AuthMessage = &ws.AuthMessage{
+						Type:   "error",
+						Reason: "QR code was not scanned in the required time",
+					}
+
 					// если инциализировано сокет соединение
 					if InstanceWa.WsQrClient != nil {
 
-						// создаем структу ws сообщения
-						dataWs := ws.DataWs{
-							Type:   "error",
-							Reason: "QR code was not scanned in the required time",
-						}
-
 						// отправляем QR код в ws
-						if !InstanceWa.WsQrClient.Send(dataWs) {
+						if !InstanceWa.WsQrClient.Send(*InstanceWa.Client.AuthMessage) {
 
 							// выводим ошибку
 							InstanceWa.Log.Errorf("Error send QR code to websocket")

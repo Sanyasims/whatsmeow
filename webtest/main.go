@@ -87,7 +87,7 @@ func main() {
 	engine.GET("/ws", wsHandle)
 
 	// метод получает QR код авторизации GET запросом
-	engine.GET("getQrCode", getQrCode)
+	engine.POST("getQrCode", getQrCode)
 
 	//маршрутизация отправки сообщения
 	engine.POST("/sendMessage", sendMessage)
@@ -115,7 +115,7 @@ func runInstance(ctx *gin.Context) {
 	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
 
 		// отдаем ответ
@@ -123,7 +123,7 @@ func runInstance(ctx *gin.Context) {
 			"reason": "Bad request data",
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
@@ -136,7 +136,7 @@ func runInstance(ctx *gin.Context) {
 	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error during parse RequestRunInstance: %v", err)
 
 		// отдаем ответ
@@ -144,14 +144,14 @@ func runInstance(ctx *gin.Context) {
 			"reason": "Bad request data",
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
 	// если не указано прокси
 	if requestRunInstance.Proxy == "" {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Missing proxy RequestRunInstance: %v", err)
 
 		// отдаем ответ
@@ -159,17 +159,17 @@ func runInstance(ctx *gin.Context) {
 			"reason": "Missing proxy",
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
 	// получаем прокси из строки
 	proxy, err := properties.GetProxy(requestRunInstance.Proxy)
 
-	// если есть ошиька
+	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error get proxy from string: %v", err)
 
 		// отдаем ответ
@@ -177,7 +177,7 @@ func runInstance(ctx *gin.Context) {
 			"reason": err.Error(),
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
@@ -221,7 +221,7 @@ func wsHandle(ctx *gin.Context) {
 	//если не ок или нет параметра
 	if !ok || query == "" {
 
-		wainstance.InstanceWa.WsQrClient.Send(ws.DataWs{
+		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
 			Type:   "error",
 			Reason: "Missing proxy",
 		})
@@ -238,7 +238,7 @@ func wsHandle(ctx *gin.Context) {
 	// если есть ошибка
 	if err != nil {
 
-		wainstance.InstanceWa.WsQrClient.Send(ws.DataWs{
+		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
 			Type:   "error",
 			Reason: "Error get proxy from string",
 		})
@@ -259,6 +259,121 @@ func wsHandle(ctx *gin.Context) {
 // wsHandle получает QR код авторизации GET запросом
 func getQrCode(ctx *gin.Context) {
 
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса запуска инстанса
+	var requestRunInstance properties.RequestRunInstance
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestRunInstance)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestRunInstance: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// если не указано прокси
+	if requestRunInstance.Proxy == "" {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Missing proxy RequestRunInstance: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Missing proxy",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// получаем прокси из строки
+	proxy, err := properties.GetProxy(requestRunInstance.Proxy)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error get proxy from string: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": err.Error(),
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// если еще нет сообщения авторизации
+	if wainstance.InstanceWa.Client != nil && wainstance.InstanceWa.Client.AuthMessage != nil {
+
+		// отдаем ответ
+		ctx.JSON(200, wainstance.InstanceWa.Client.AuthMessage)
+
+		// если тип сообщения ошибка ил данные аккаунта
+		if wainstance.InstanceWa.Client.AuthMessage.Type == "error" || wainstance.InstanceWa.Client.AuthMessage.Type == "account" {
+
+			// пишем nil сообщению авторизации
+			wainstance.InstanceWa.Client.AuthMessage = nil
+		}
+
+		// не продолжаем
+		return
+	}
+
+	// запускаем инстанс в отдельном потоке
+	go wainstance.StartInstance(proxy, false)
+
+	// счетчик итераций
+	ePoch := 0
+
+	for {
+
+		// если еще нет сообщения авторизации
+		if wainstance.InstanceWa.Client == nil || wainstance.InstanceWa.Client.AuthMessage == nil {
+
+			// делаем задержку
+			time.Sleep(500 * time.Millisecond)
+
+			// инкременируем счетчик итераций
+			ePoch++
+
+		} else {
+
+			// отдаем ответ
+			ctx.JSON(200, wainstance.InstanceWa.Client.AuthMessage)
+
+			// прерываем цикл
+			return
+		}
+	}
 }
 
 // Метод отправляет сообщение
@@ -270,7 +385,7 @@ func sendMessage(ctx *gin.Context) {
 	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
 
 		// отдаем ответ
@@ -291,7 +406,7 @@ func sendMessage(ctx *gin.Context) {
 	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
 
 		// отдаем ответ
@@ -299,7 +414,7 @@ func sendMessage(ctx *gin.Context) {
 			"reason": "Bad request data",
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
@@ -316,7 +431,7 @@ func sendMessage(ctx *gin.Context) {
 			"reason": "Bad request data",
 		})
 
-		//отдаем
+		// не продолжаем
 		return
 	}
 

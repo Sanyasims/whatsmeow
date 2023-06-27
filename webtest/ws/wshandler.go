@@ -21,8 +21,8 @@ type ClientWs struct {
 	Log    waLog.Logger
 }
 
-// DataWs данные ws сообщения
-type DataWs struct {
+// AuthMessage данные ws сообщения
+type AuthMessage struct {
 	Type        string `json:"type"`
 	ImageQrCode string `json:"imageQrCode"`
 	Reason      string `json:"reason"`
@@ -79,7 +79,7 @@ func (clientWs *ClientWs) Read() {
 }
 
 // Send Метод отправляет сокет сообщение
-func (clientWs *ClientWs) Send(data DataWs) (success bool) {
+func (clientWs *ClientWs) Send(data AuthMessage) (success bool) {
 
 	// если ws не инициализирован
 	if clientWs == nil || clientWs.Socket == nil {
