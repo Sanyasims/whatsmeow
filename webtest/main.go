@@ -95,6 +95,9 @@ func main() {
 	// получение контактов
 	engine.GET("/getContacts", getContacts)
 
+	// проверка номера на наличие аккаунта Whatsapp
+	engine.POST("/checkWhatsapp", checkWhatsapp)
+
 	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
 
@@ -565,4 +568,96 @@ func getContacts(ctx *gin.Context) {
 
 	// отдаем ответ
 	ctx.JSON(200, contacts)
+}
+
+// Метод проверяет номер на наличие аккаунта Whatsapp
+func checkWhatsapp(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса проверки номера на аккаунт Whatsapp
+	var requestCheckWhatsapp properties.RequestCheckWhatsapp
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestCheckWhatsapp)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// проверяем на Whatsapp
+	resp, err := wainstance.InstanceWa.Client.IsOnWhatsApp([]string{requestCheckWhatsapp.Phone})
+
+	// если ошибка
+	if err != nil {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": err.Error(),
+		})
+	} else {
+
+		responseCheckWhatsapp := properties.ResponseCheckWhatsapp{}
+
+		// обходим ответ
+		for _, item := range resp {
+
+			if item.VerifiedName != nil {
+
+				responseCheckWhatsapp.WhatsappOnPhone = item.IsIn
+
+				responseCheckWhatsapp.IsBusiness = true
+
+				wainstance.InstanceWa.Log.Infof("%s: on whatsapp: %t, JID: %s, business name: %s", item.Query, item.IsIn, item.JID, item.VerifiedName.Details.GetVerifiedName())
+
+			} else {
+
+				responseCheckWhatsapp.WhatsappOnPhone = item.IsIn
+
+				wainstance.InstanceWa.Log.Infof("%s: on whatsapp: %t, JID: %s", item.Query, item.IsIn, item.JID)
+			}
+		}
+
+		// отдаем ответ
+		ctx.JSON(200, responseCheckWhatsapp)
+	}
 }

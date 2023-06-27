@@ -13,3 +13,8 @@ type RequestSendMessage struct {
 	QuotedMessageId string `json:"quotedMessageId"`
 	IsForwarded     bool   `json:"isForwarded"`
 }
+
+// RequestCheckWhatsapp Структура запроса проверки номера на аккаунт Whatsapp
+type RequestCheckWhatsapp struct {
+	Phone string `json:"phone"`
+}
