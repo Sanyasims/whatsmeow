@@ -70,35 +70,35 @@ func main() {
 	// если есть ошибка
 	if err != nil {
 
-		//логируем ошибку
+		// логируем ошибку
 		wainstance.InstanceWa.Log.Errorf("Error during parse Configuration: %v", err)
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
-	//создаем экземпляр Engine
+	// создаем экземпляр Engine
 	engine := gin.Default()
 
-	//маршрутизация запуска инстанса
+	// маршрутизация запуска инстанса
 	engine.GET("/runInstance", runInstance)
 
-	//websocket
+	// websocket
 	engine.GET("/ws", wsHandle)
 
 	// метод получает QR код авторизации GET запросом
 	engine.POST("getQrCode", getQrCode)
 
-	//маршрутизация отправки сообщения
+	// маршрутизация отправки сообщения
 	engine.POST("/sendMessage", sendMessage)
 
-	//запускаем сервер
+	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
 
-	//если есть ошибка
+	// если есть ошибка
 	if err != nil {
 
-		//выводим лог
+		// выводим лог
 		wainstance.InstanceWa.Log.Errorf("Failed to start server: %v", err)
 
 		//не продолжаем
@@ -181,6 +181,18 @@ func runInstance(ctx *gin.Context) {
 		return
 	}
 
+	// если клиент не nil и установлено сокет соединение с Whatsapp
+	if wainstance.InstanceWa.Client != nil && wainstance.InstanceWa.Client.IsConnected() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance already connected",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// запускаем инстанс в отдельном потоке
 	go wainstance.StartInstance(proxy, true)
 
@@ -246,6 +258,20 @@ func wsHandle(ctx *gin.Context) {
 		wainstance.InstanceWa.WsQrClient.Close()
 
 		//не продолжаем
+		return
+	}
+
+	// если клиент не nil и установлено сокет соединение с Whatsapp
+	if wainstance.InstanceWa.Client != nil && wainstance.InstanceWa.Client.IsConnected() {
+
+		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
+			Type:   "error",
+			Reason: "Instance already connected",
+		})
+
+		wainstance.InstanceWa.WsQrClient.Close()
+
+		// не продолжаем
 		return
 	}
 
@@ -348,6 +374,18 @@ func getQrCode(ctx *gin.Context) {
 		return
 	}
 
+	// если клиент не nil и установлено сокет соединение с Whatsapp
+	if wainstance.InstanceWa.Client != nil && wainstance.InstanceWa.Client.IsConnected() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance already connected",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// запускаем инстанс в отдельном потоке
 	go wainstance.StartInstance(proxy, false)
 
@@ -393,7 +431,7 @@ func sendMessage(ctx *gin.Context) {
 			"reason": "Bad request data",
 		})
 
-		//не продолжаем
+		// не продолжаем
 		return
 	}
 
@@ -454,7 +492,7 @@ func sendMessage(ctx *gin.Context) {
 
 	} else {
 
-		//выводим лог
+		// выводим лог
 		wainstance.InstanceWa.Log.Infof("Message sent (server timestamp: %s)", resp.Timestamp)
 
 		// отдаем ответ
@@ -462,7 +500,7 @@ func sendMessage(ctx *gin.Context) {
 			"id": resp.ID,
 		})
 
-		//создаем структуру вебхук о статусе сообщения
+		// создаем структуру вебхук о статусе сообщения
 		statusMessageWebhook := webhook.StatusMessageWebhook{
 			TypeWebhook:     "statusMessage",
 			WebhookUrl:      wainstance.InstanceWa.Config.WebhookUrl,
@@ -479,7 +517,7 @@ func sendMessage(ctx *gin.Context) {
 			},
 		}
 
-		//отправляем вебхук
+		// отправляем вебхук
 		webhook.SendStatusMessageWebhook(statusMessageWebhook, wainstance.InstanceWa.Log)
 	}
 }
