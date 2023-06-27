@@ -83,14 +83,17 @@ func main() {
 	// маршрутизация запуска инстанса
 	engine.GET("/runInstance", runInstance)
 
-	// websocket
+	// сокет соединение авторизации
 	engine.GET("/ws", wsHandle)
 
-	// метод получает QR код авторизации GET запросом
-	engine.POST("getQrCode", getQrCode)
+	// авторизация GET запросом
+	engine.POST("/getQrCode", getQrCode)
 
 	// маршрутизация отправки сообщения
 	engine.POST("/sendMessage", sendMessage)
+
+	// получение контактов
+	engine.GET("/getContacts", getContacts)
 
 	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
@@ -104,6 +107,20 @@ func main() {
 		//не продолжаем
 		return
 	}
+}
+
+// Метод проверяет подключен ли инстанс и авторизован
+func isConnectAndAuth() bool {
+
+	// если клиент nil или не установлено сокет соединение с Whatsapp или инстанс не авторизован
+	if wainstance.InstanceWa.Client == nil || !wainstance.InstanceWa.Client.IsConnected() || !wainstance.InstanceWa.Client.IsLoggedIn() {
+
+		// отдаем инстанс не подключен
+		return false
+	}
+
+	// отдаем инстанс подключен и авторизован
+	return true
 }
 
 // Метод запускает инстанс
@@ -202,7 +219,7 @@ func runInstance(ctx *gin.Context) {
 	})
 }
 
-// Метод обрабатывет сокет соединение
+// Метод обрабатывет сокет соединение авторизации
 func wsHandle(ctx *gin.Context) {
 
 	// обновляем HTTP протокол на websocket протокол
@@ -282,7 +299,7 @@ func wsHandle(ctx *gin.Context) {
 	go wainstance.StartInstance(proxy, false)
 }
 
-// wsHandle получает QR код авторизации GET запросом
+// Метод получает QR код авторизации GET запросом
 func getQrCode(ctx *gin.Context) {
 
 	// считываем тело запроса
@@ -520,4 +537,32 @@ func sendMessage(ctx *gin.Context) {
 		// отправляем вебхук
 		webhook.SendStatusMessageWebhook(statusMessageWebhook, wainstance.InstanceWa.Log)
 	}
+}
+
+// Метод отдает контакты инстанса
+func getContacts(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// получаем контакты
+	contacts, err := wainstance.InstanceWa.Client.Store.Contacts.GetAllContacts()
+
+	//если ошибка
+	if err != nil {
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error get contacts: %v", err)
+	}
+
+	// отдаем ответ
+	ctx.JSON(200, contacts)
 }
