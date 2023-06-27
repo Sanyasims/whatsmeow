@@ -81,7 +81,7 @@ func main() {
 	engine := gin.Default()
 
 	// маршрутизация запуска инстанса
-	engine.GET("/runInstance", runInstance)
+	engine.POST("/runInstance", runInstance)
 
 	// сокет соединение авторизации
 	engine.GET("/ws", wsHandle)
@@ -97,6 +97,9 @@ func main() {
 
 	// проверка номера на наличие аккаунта Whatsapp
 	engine.POST("/checkWhatsapp", checkWhatsapp)
+
+	// разлогинивание инстанса
+	engine.GET("/logoutInstance", logoutInstance)
 
 	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
@@ -659,5 +662,41 @@ func checkWhatsapp(ctx *gin.Context) {
 
 		// отдаем ответ
 		ctx.JSON(200, responseCheckWhatsapp)
+	}
+}
+
+// Метод разлогинивает инстанс
+func logoutInstance(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// разлогиваем инстанс
+	err := wainstance.InstanceWa.Client.Logout()
+
+	// если ошибка
+	if err != nil {
+
+		// отдаем ответ
+		ctx.JSON(200, gin.H{
+			"success": false,
+			"reason":  err.Error(),
+		})
+
+	} else {
+
+		// отдаем ответ
+		ctx.JSON(200, gin.H{
+			"success": true,
+		})
 	}
 }
