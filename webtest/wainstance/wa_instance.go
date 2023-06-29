@@ -1087,16 +1087,6 @@ func handler(rawEvt interface{}) {
 		InstanceWa.Log.Debugf("App state event: %+v / %+v", evt.Index, evt.SyncActionValue)
 	case *events.KeepAliveTimeout:
 		InstanceWa.Log.Debugf("Keepalive timeout event: %+v", evt)
-		if evt.ErrorCount > 3 {
-			InstanceWa.Log.Debugf("Got >3 keepalive timeouts, forcing reconnect")
-			go func() {
-				InstanceWa.Client.Disconnect()
-				err := InstanceWa.Client.Connect()
-				if err != nil {
-					InstanceWa.Log.Errorf("Error force-reconnecting after keepalive timeouts: %v", err)
-				}
-			}()
-		}
 	case *events.KeepAliveRestored:
 		InstanceWa.Log.Debugf("Keepalive restored")
 	}
