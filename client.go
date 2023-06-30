@@ -678,3 +678,13 @@ func (cli *Client) ParseWebMessage(chatJID types.JID, webMsg *waProto.WebMessage
 	evt.UnwrapRaw()
 	return evt, nil
 }
+
+// HistorySync метод сохраняет историю сообщений
+func (cli *Client) HistorySync(data *waProto.HistorySync) error {
+
+	// сохраняет историю сообщений
+	err := cli.Store.HistorySync(data)
+
+	// отдаем результат
+	return err
+}

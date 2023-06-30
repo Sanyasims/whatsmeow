@@ -211,6 +211,19 @@ func upgradeV1(tx *sql.Tx, _ *Container) error {
 	if err != nil {
 		return err
 	}
+	_, err = tx.Exec(`CREATE TABLE history_messages(
+     	chat_id VARCHAR(40) NOT NULL,
+     	message_id VARCHAR(40) NOT NULL,
+     	message_timestamp INTEGER NOT NULL,
+     	message_data TEXT NOT NULL,
+     	message_status INTEGER NOT NULL,
+     	status_timestamp INTEGER INTEGER NOT NULL,
+
+     	PRIMARY KEY (chat_id, message_id)
+	)`)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

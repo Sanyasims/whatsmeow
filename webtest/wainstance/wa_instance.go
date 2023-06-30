@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go.mau.fi/whatsmeow/socket"
@@ -1067,22 +1066,36 @@ func handler(rawEvt interface{}) {
 			InstanceWa.Log.Infof("%s is now online", evt.From)
 		}
 	case *events.HistorySync:
-		id := atomic.AddInt32(&InstanceWa.HistorySyncID, 1)
-		fileName := fmt.Sprintf("history-%d-%d.json", InstanceWa.StartupTime, id)
-		file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0600)
+
+		// пишем историю в базу
+		err := InstanceWa.Client.HistorySync(evt.Data)
+
+		// если ошибка
 		if err != nil {
-			InstanceWa.Log.Errorf("Failed to open file to write history sync: %v", err)
+
+			// выовдим ошибку
+			InstanceWa.Log.Errorf("Failed history sync: %v", err)
+
+			// не продолжаем
 			return
 		}
-		enc := json.NewEncoder(file)
-		enc.SetIndent("", "  ")
-		err = enc.Encode(evt.Data)
-		if err != nil {
-			InstanceWa.Log.Errorf("Failed to write history sync: %v", err)
-			return
-		}
-		InstanceWa.Log.Infof("Wrote history sync to %s", fileName)
-		_ = file.Close()
+
+		//id := atomic.AddInt32(&InstanceWa.HistorySyncID, 1)
+		//fileName := fmt.Sprintf("history-%d-%d.json", InstanceWa.StartupTime, id)
+		//file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0600)
+		//if err != nil {
+		//	InstanceWa.Log.Errorf("Failed to open file to write history sync: %v", err)
+		//	return
+		//}
+		//enc := json.NewEncoder(file)
+		//enc.SetIndent("", "  ")
+		//err = enc.Encode(evt.Data)
+		//if err != nil {
+		//	InstanceWa.Log.Errorf("Failed to write history sync: %v", err)
+		//	return
+		//}
+		//InstanceWa.Log.Infof("Wrote history sync to %s", fileName)
+		//_ = file.Close()
 	case *events.AppState:
 		InstanceWa.Log.Debugf("App state event: %+v / %+v", evt.Index, evt.SyncActionValue)
 	case *events.KeepAliveTimeout:

@@ -9,6 +9,7 @@ package sqlstore
 import (
 	"crypto/rand"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	mathRand "math/rand"
@@ -133,6 +134,7 @@ func (c *Container) scanDevice(row scannable) (*store.Device, error) {
 	device.MsgSecrets = innerStore
 	device.PrivacyTokens = innerStore
 	device.Container = c
+	device.History = innerStore
 	device.Initialized = true
 
 	return &device, nil
@@ -266,4 +268,51 @@ func (c *Container) DeleteDevice(store *store.Device) error {
 	_, err = c.db.Exec(deletePrivacyToken, store.ID.String())
 
 	return err
+}
+
+const (
+	saveOrUpdateMessage = `
+		INSERT INTO history_messages (chat_id, message_id, message_timestamp, message_data, message_status, status_timestamp)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (chat_id, message_id) DO UPDATE SET message_timestamp = $3, message_data = $4`
+)
+
+// DeviceHistorySync метод сохраняет историю
+func (c *Container) DeviceHistorySync(data *waProto.HistorySync) error {
+
+	// если нет данных сообщений
+	if data.Conversations == nil {
+
+		// не продолжаем
+		return nil
+	}
+
+	// обходим данные сообщений
+	for _, conversation := range data.Conversations {
+
+		// если есть данные сообщений
+		if conversation != nil {
+
+			//обходим сообщения
+			for _, message := range conversation.Messages {
+
+				jsonData, err := json.Marshal(message)
+
+				if err != nil {
+
+					fmt.Errorf("error marshal message %v", err)
+				} else {
+
+					_, err := c.db.Exec(saveOrUpdateMessage, conversation.Id, message.Message.Key.Id, message.Message.MessageTimestamp, string(jsonData), message.Message.Status, message.Message.MessageTimestamp)
+
+					if err != nil {
+
+						fmt.Errorf("error saveOrUpdateMessage %v", err)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

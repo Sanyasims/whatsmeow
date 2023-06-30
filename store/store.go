@@ -100,6 +100,10 @@ type DeviceContainer interface {
 	DeleteDevice(store *Device) error
 }
 
+type HistoryStore interface {
+	DeviceHistorySync(data *waProto.HistorySync) error
+}
+
 type MessageSecretInsert struct {
 	Chat   types.JID
 	Sender types.JID
@@ -151,6 +155,7 @@ type Device struct {
 	MsgSecrets    MsgSecretStore
 	PrivacyTokens PrivacyTokenStore
 	Container     DeviceContainer
+	History       HistoryStore
 
 	DatabaseErrorHandler func(device *Device, action string, attemptIndex int, err error) (retry bool)
 }
@@ -174,4 +179,14 @@ func (device *Device) Delete() error {
 	}
 	device.ID = nil
 	return nil
+}
+
+// HistorySync метод сохраняет историю
+func (device *Device) HistorySync(data *waProto.HistorySync) error {
+
+	// сохраняем историю
+	err := device.History.DeviceHistorySync(data)
+
+	// отдаем результат
+	return err
 }
