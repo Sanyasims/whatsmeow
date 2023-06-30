@@ -9,6 +9,7 @@ package store
 
 import (
 	"fmt"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	"time"
 
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -101,7 +102,7 @@ type DeviceContainer interface {
 }
 
 type HistoryStore interface {
-	DeviceHistorySync(data *waProto.HistorySync) error
+	DeviceHistorySync(messages []properties.DataMessage) error
 }
 
 type MessageSecretInsert struct {
@@ -182,10 +183,10 @@ func (device *Device) Delete() error {
 }
 
 // HistorySync метод сохраняет историю
-func (device *Device) HistorySync(data *waProto.HistorySync) error {
+func (device *Device) HistorySync(messages []properties.DataMessage) error {
 
 	// сохраняем историю
-	err := device.History.DeviceHistorySync(data)
+	err := device.History.DeviceHistorySync(messages)
 
 	// отдаем результат
 	return err

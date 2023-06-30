@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go.mau.fi/whatsmeow/socket"
@@ -1067,35 +1068,53 @@ func handler(rawEvt interface{}) {
 		}
 	case *events.HistorySync:
 
-		// пишем историю в базу
-		err := InstanceWa.Client.HistorySync(evt.Data)
+		var messages []properties.DataMessage
 
-		// если ошибка
-		if err != nil {
+		// если есть данные сообщений
+		if evt.Data.Conversations != nil {
 
-			// выовдим ошибку
-			InstanceWa.Log.Errorf("Failed history sync: %v", err)
+			// обходим данные сообщений
+			for _, conversation := range evt.Data.Conversations {
 
-			// не продолжаем
-			return
+				// если есть данные сообщений
+				if conversation != nil {
+
+					//обходим сообщения
+					for _, message := range conversation.Messages {
+
+						jsonData, err := json.Marshal(message)
+
+						if err != nil {
+
+							fmt.Errorf("error marshal message %v", err)
+						} else {
+
+							dataMessage := properties.DataMessage{
+								ChatId:           *conversation.Id,
+								MessageId:        *message.Message.Key.Id,
+								MessageTimestamp: *message.Message.MessageTimestamp,
+								JsonData:         string(jsonData),
+								MessageStatus:    0,
+								StatusTimestamp:  *message.Message.MessageTimestamp,
+							}
+
+							if message.Message.Status != nil {
+								dataMessage.MessageStatus = int32(*message.Message.Status)
+							}
+
+							messages = append(messages, dataMessage)
+						}
+					}
+				}
+			}
 		}
 
-		//id := atomic.AddInt32(&InstanceWa.HistorySyncID, 1)
-		//fileName := fmt.Sprintf("history-%d-%d.json", InstanceWa.StartupTime, id)
-		//file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0600)
-		//if err != nil {
-		//	InstanceWa.Log.Errorf("Failed to open file to write history sync: %v", err)
-		//	return
-		//}
-		//enc := json.NewEncoder(file)
-		//enc.SetIndent("", "  ")
-		//err = enc.Encode(evt.Data)
-		//if err != nil {
-		//	InstanceWa.Log.Errorf("Failed to write history sync: %v", err)
-		//	return
-		//}
-		//InstanceWa.Log.Infof("Wrote history sync to %s", fileName)
-		//_ = file.Close()
+		err := InstanceWa.Client.HistorySync(messages)
+
+		if err != nil {
+
+			fmt.Errorf("error saveOrUpdateMessage %v", err)
+		}
 	case *events.AppState:
 		InstanceWa.Log.Debugf("App state event: %+v / %+v", evt.Index, evt.SyncActionValue)
 	case *events.KeepAliveTimeout:

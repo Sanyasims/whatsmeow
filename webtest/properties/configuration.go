@@ -44,3 +44,13 @@ func GetProxy(proxy string) (socket.Proxy, error) {
 	// отдаем прокси
 	return http.ProxyURL(&proxyUrl), nil
 }
+
+// DataMessage данные о сообщении
+type DataMessage struct {
+	ChatId           string
+	MessageId        string
+	MessageTimestamp uint64
+	JsonData         string
+	MessageStatus    int32
+	StatusTimestamp  uint64
+}

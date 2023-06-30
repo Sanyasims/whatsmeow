@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	"go.mau.fi/whatsmeow/webtest/ws"
 	"net/http"
 	"net/url"
@@ -680,10 +681,10 @@ func (cli *Client) ParseWebMessage(chatJID types.JID, webMsg *waProto.WebMessage
 }
 
 // HistorySync метод сохраняет историю сообщений
-func (cli *Client) HistorySync(data *waProto.HistorySync) error {
+func (cli *Client) HistorySync(messages []properties.DataMessage) error {
 
 	// сохраняет историю сообщений
-	err := cli.Store.HistorySync(data)
+	err := cli.Store.HistorySync(messages)
 
 	// отдаем результат
 	return err

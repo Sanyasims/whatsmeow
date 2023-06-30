@@ -9,9 +9,9 @@ package sqlstore
 import (
 	"crypto/rand"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"go.mau.fi/whatsmeow/webtest/properties"
 	mathRand "math/rand"
 
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -278,39 +278,19 @@ const (
 )
 
 // DeviceHistorySync метод сохраняет историю
-func (c *Container) DeviceHistorySync(data *waProto.HistorySync) error {
+func (c *Container) DeviceHistorySync(messages []properties.DataMessage) error {
 
-	// если нет данных сообщений
-	if data.Conversations == nil {
-
-		// не продолжаем
+	if messages == nil || len(messages) < 1 {
 		return nil
 	}
 
-	// обходим данные сообщений
-	for _, conversation := range data.Conversations {
+	for _, message := range messages {
 
-		// если есть данные сообщений
-		if conversation != nil {
+		_, err := c.db.Exec(saveOrUpdateMessage, message.ChatId, message.MessageId, message.MessageTimestamp, message.JsonData, message.MessageStatus, message.StatusTimestamp)
 
-			//обходим сообщения
-			for _, message := range conversation.Messages {
+		if err != nil {
 
-				jsonData, err := json.Marshal(message)
-
-				if err != nil {
-
-					fmt.Errorf("error marshal message %v", err)
-				} else {
-
-					_, err := c.db.Exec(saveOrUpdateMessage, conversation.Id, message.Message.Key.Id, message.Message.MessageTimestamp, string(jsonData), message.Message.Status, message.Message.MessageTimestamp)
-
-					if err != nil {
-
-						fmt.Errorf("error saveOrUpdateMessage %v", err)
-					}
-				}
-			}
+			fmt.Errorf("error saveOrUpdateMessage %v", err)
 		}
 	}
 
