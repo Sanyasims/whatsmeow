@@ -931,7 +931,7 @@ func handler(rawEvt interface{}) {
 		InstanceWa.Log.Infof("Received message %s from %s (%s): %+v", evt.Info.ID, evt.Info.SourceString(), strings.Join(metaParts, ", "), evt.Message)
 
 		// если текстовое сообщение
-		if evt.Info.Type == "text" {
+		if evt.Info.Type == "text" && evt.Info.Category != "peer" {
 
 			// создаем объект данных webhook о новом сообщении
 			newMessageWebhook := webhook.NewMessageWebhook{
