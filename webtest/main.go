@@ -6,6 +6,7 @@ import (
 	"flag"
 	"github.com/gin-gonic/gin"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/webtest/formats"
 	"go.mau.fi/whatsmeow/webtest/properties"
 	"go.mau.fi/whatsmeow/webtest/wainstance"
 	"go.mau.fi/whatsmeow/webtest/webhook"
@@ -107,6 +108,9 @@ func main() {
 
 	// получение аватара аккаунта Whatsapp
 	engine.POST("/getProfilePicture", getProfilePicture)
+
+	// получение статуса акаунта Whatsapp
+	engine.POST("/getStatusAccount", getStatusAccount)
 
 	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
@@ -831,4 +835,156 @@ func getProfilePicture(ctx *gin.Context) {
 			"reason": "No avatar found",
 		})
 	}
+}
+
+// Метод получает статус аккаунта Whatsapp
+func getStatusAccount(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса с номером телефона
+	var requestWithPhoneNumber properties.RequestWithPhoneNumber
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestWithPhoneNumber)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// создаем канал связки потоков
+	wainstance.InstanceWa.ChainResponseGetStatusAccount = make(chan properties.ResponseGetStatusAccount)
+
+	// делаем себя недоступным
+	err = wainstance.SetPresence("unavailable")
+
+	// если ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error SetPresence: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Error SetPresence: " + err.Error(),
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// делаем задержку
+	time.Sleep(300 * time.Millisecond)
+
+	//делаем себя доступным
+	err = wainstance.SetPresence("available")
+
+	// если ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error SetPresence: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Error SetPresence: " + err.Error(),
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// подписываемся на пользователя
+	err = wainstance.SubscribePresence(requestWithPhoneNumber.Phone)
+
+	// если ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error SubscribePresence: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Error SubscribePresence: " + err.Error(),
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// получаем из канала данные о пользователе
+	responseGetStatusAccount := <-wainstance.InstanceWa.ChainResponseGetStatusAccount
+
+	// ставим nil каналу
+	wainstance.InstanceWa.ChainResponseGetStatusAccount = nil
+
+	// получаем данные пользователя
+	resp, err := wainstance.GetUser(requestWithPhoneNumber.Phone)
+
+	// делаем себя недоступным
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error GetUser: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Error GetUser: " + err.Error(),
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// обходим ответ
+	for _, info := range resp {
+
+		// пишем статус аккаунта
+		responseGetStatusAccount.StatusAccount = info.Status
+
+		// пишем время установки статуса аккаунта
+		responseGetStatusAccount.TimeStatusSet = formats.ParseInt64(info.TimeStatusSet)
+	}
+
+	// отдаем ответ
+	ctx.JSON(200, responseGetStatusAccount)
 }

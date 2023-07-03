@@ -48,6 +48,7 @@ func (cli *Client) handlePresence(node *waBinary.Node) {
 	}
 	lastSeen := ag.OptionalString("last")
 	if lastSeen != "" && lastSeen != "deny" {
+		evt.UnixLastSeen = ag.Uint64("last")
 		evt.LastSeen = ag.UnixTime("last")
 	}
 	if !ag.OK() {

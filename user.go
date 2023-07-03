@@ -215,7 +215,9 @@ func (cli *Client) GetUserInfo(jids []types.JID) (map[types.JID]types.UserInfo, 
 			cli.Log.Warnf("Failed to parse %s's verified name details: %v", jid, err)
 		}
 		status, _ := child.GetChildByTag("status").Content.([]byte)
+		timeStatusSet, _ := child.GetChildByTag("status").Attrs["t"].(string)
 		info.Status = string(status)
+		info.TimeStatusSet = timeStatusSet
 		info.PictureID, _ = child.GetChildByTag("picture").Attrs["id"].(string)
 		info.Devices = parseDeviceList(jid.User, child.GetChildByTag("devices"))
 		if verifiedName != nil {

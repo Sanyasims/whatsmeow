@@ -39,18 +39,19 @@ import (
 var InstanceWa Instance
 
 type Instance struct {
-	Client          *whatsmeow.Client
-	Log             waLog.Logger
-	DbLog           waLog.Logger
-	DebugLogs       *bool
-	DbDialect       *string
-	DbAddress       *string
-	RequestFullSync *bool
-	PairRejectChan  chan bool
-	HistorySyncID   int32
-	StartupTime     int64
-	Config          properties.Configuration
-	WsQrClient      *ws.ClientWs
+	Client                        *whatsmeow.Client
+	Log                           waLog.Logger
+	DbLog                         waLog.Logger
+	DebugLogs                     *bool
+	DbDialect                     *string
+	DbAddress                     *string
+	RequestFullSync               *bool
+	PairRejectChan                chan bool
+	HistorySyncID                 int32
+	StartupTime                   int64
+	Config                        properties.Configuration
+	WsQrClient                    *ws.ClientWs
+	ChainResponseGetStatusAccount chan properties.ResponseGetStatusAccount
 }
 
 // StartInstance Метод запускает инстанс
@@ -326,6 +327,32 @@ func StopInstance() {
 	InstanceWa.Client.Disconnect()
 }
 
+// SetPresence устанавливает доступность себя
+func SetPresence(presence string) error {
+	return InstanceWa.Client.SendPresence(types.Presence(presence))
+}
+
+// SubscribePresence метод подписывается на пользователя
+func SubscribePresence(phone string) error {
+	jid, ok := ParseJID(phone)
+	if !ok {
+		return errors.New("error parse JID")
+	}
+	return InstanceWa.Client.SubscribePresence(jid)
+}
+
+// GetUser метод отдает данные пользователя
+func GetUser(phone string) (map[types.JID]types.UserInfo, error) {
+
+	jid, ok := ParseJID(phone)
+
+	if !ok {
+		return nil, errors.New("error parse JID")
+	}
+
+	return InstanceWa.Client.GetUserInfo([]types.JID{jid})
+}
+
 // ParseJID Метод парсит идентификатор Whatsapp
 func ParseJID(arg string) (types.JID, bool) {
 	if arg[0] == '+' {
@@ -355,7 +382,7 @@ func handleCmd(cmd string, args []string) {
 		if err != nil {
 			InstanceWa.Log.Errorf("Failed to connect: %v", err)
 		}
-	case "logout":
+	case "logout": //Сделал в API
 		err := InstanceWa.Client.Logout()
 		if err != nil {
 			InstanceWa.Log.Errorf("Error logging out: %v", err)
@@ -393,7 +420,7 @@ func handleCmd(cmd string, args []string) {
 			keyIDs[i] = decoded
 		}
 		InstanceWa.Client.DangerousInternals().RequestAppStateKeys(context.Background(), keyIDs)
-	case "checkuser":
+	case "checkuser": //Сделал в API
 		if len(args) < 1 {
 			InstanceWa.Log.Errorf("Usage: checkuser <phone numbers...>")
 			return
@@ -424,7 +451,7 @@ func handleCmd(cmd string, args []string) {
 				InstanceWa.Log.Infof("ClientWs is newer than latest")
 			}
 		}
-	case "subscribepresence":
+	case "subscribepresence": //Сделал в API
 		if len(args) < 1 {
 			InstanceWa.Log.Errorf("Usage: subscribepresence <jid>")
 			return
@@ -437,7 +464,7 @@ func handleCmd(cmd string, args []string) {
 		if err != nil {
 			fmt.Println(err)
 		}
-	case "presence":
+	case "presence": //Сделал в API
 		if len(args) == 0 {
 			InstanceWa.Log.Errorf("Usage: presence <available/unavailable>")
 			return
@@ -459,7 +486,7 @@ func handleCmd(cmd string, args []string) {
 		} else {
 			fmt.Printf("%+v\n", resp)
 		}
-	case "getuser":
+	case "getuser": //Сделал в API
 		if len(args) < 1 {
 			InstanceWa.Log.Errorf("Usage: getuser <jids...>")
 			return
@@ -487,7 +514,7 @@ func handleCmd(cmd string, args []string) {
 		} else {
 			InstanceWa.Log.Infof("Media connection: %+v", conn)
 		}
-	case "getavatar":
+	case "getavatar": //Сделал в API
 		if len(args) < 1 {
 			InstanceWa.Log.Errorf("Usage: getavatar <jid> [existing ID] [--preview] [--community]")
 			return
@@ -1067,14 +1094,53 @@ func handler(rawEvt interface{}) {
 			}
 		}
 	case *events.Presence:
-		if evt.Unavailable {
-			if evt.LastSeen.IsZero() {
-				InstanceWa.Log.Infof("%s is now offline", evt.From)
+
+		// если канал не инициализирован
+		if InstanceWa.ChainResponseGetStatusAccount != nil {
+
+			// инициализируем объект ответа на получение информации о пользователе
+			responseGetStatusAccount := properties.ResponseGetStatusAccount{}
+
+			// если не доступен
+			if evt.Unavailable {
+
+				// если время последнего посещения ноль
+				if evt.LastSeen.IsZero() {
+
+					// выводим лог
+					InstanceWa.Log.Infof("%s is now offline", evt.From)
+
+					// пишем что пользователь offline
+					responseGetStatusAccount.StatusAvailable = "offline"
+
+					// передаем объект ответа на получение информации о пользователе в канал
+					InstanceWa.ChainResponseGetStatusAccount <- responseGetStatusAccount
+
+				} else {
+
+					// выводим лог
+					InstanceWa.Log.Infof("%s is now offline (last seen: %s)", evt.From, evt.LastSeen)
+
+					// пишем что пользователь offline
+					responseGetStatusAccount.StatusAvailable = "offline"
+
+					// пишем время последнего визита
+					responseGetStatusAccount.LastVisit = evt.UnixLastSeen
+
+					// передаем объект ответа на получение информации о пользователе в канал
+					InstanceWa.ChainResponseGetStatusAccount <- responseGetStatusAccount
+				}
 			} else {
-				InstanceWa.Log.Infof("%s is now offline (last seen: %s)", evt.From, evt.LastSeen)
+
+				// выводим лог
+				InstanceWa.Log.Infof("%s is now online", evt.From)
+
+				// пишем что пользователь online
+				responseGetStatusAccount.StatusAvailable = "online"
+
+				// передаем объект ответа на получение информации о пользователе в канал
+				InstanceWa.ChainResponseGetStatusAccount <- responseGetStatusAccount
 			}
-		} else {
-			InstanceWa.Log.Infof("%s is now online", evt.From)
 		}
 	case *events.HistorySync:
 

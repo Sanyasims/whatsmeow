@@ -342,7 +342,8 @@ type Presence struct {
 	// True if the user is now offline
 	Unavailable bool
 	// The time when the user was last online. This may be the zero value if the user has hid their last seen time.
-	LastSeen time.Time
+	LastSeen     time.Time
+	UnixLastSeen uint64
 }
 
 // JoinedGroup is emitted when you join or are added to a group.

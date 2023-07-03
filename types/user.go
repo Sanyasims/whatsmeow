@@ -20,10 +20,11 @@ type VerifiedName struct {
 
 // UserInfo contains info about a WhatsApp user.
 type UserInfo struct {
-	VerifiedName *VerifiedName
-	Status       string
-	PictureID    string
-	Devices      []JID
+	VerifiedName  *VerifiedName
+	Status        string
+	PictureID     string
+	Devices       []JID
+	TimeStatusSet string
 }
 
 // ProfilePictureInfo contains the ID and URL for a WhatsApp user's profile picture or group's photo.
