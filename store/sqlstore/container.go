@@ -249,6 +249,7 @@ func (c *Container) PutDevice(device *store.Device) error {
 		device.ChatSettings = innerStore
 		device.MsgSecrets = innerStore
 		device.PrivacyTokens = innerStore
+		device.History = innerStore
 		device.Initialized = true
 	}
 	return err
