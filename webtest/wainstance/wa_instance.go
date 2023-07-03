@@ -316,6 +316,16 @@ func StartInstance(proxy socket.Proxy, onlyIfAuth bool) {
 	}
 }
 
+// StopInstance Метод останавливает инстанс
+func StopInstance() {
+
+	if InstanceWa.Client == nil {
+		return
+	}
+
+	InstanceWa.Client.Disconnect()
+}
+
 // ParseJID Метод парсит идентификатор Whatsapp
 func ParseJID(arg string) (types.JID, bool) {
 	if arg[0] == '+' {

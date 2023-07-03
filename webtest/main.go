@@ -80,8 +80,11 @@ func main() {
 	// создаем экземпляр Engine
 	engine := gin.Default()
 
-	// маршрутизация запуска инстанса
-	engine.POST("/runInstance", runInstance)
+	// запуск инстанса
+	engine.POST("/startInstance", startInstance)
+
+	// остановка инстанса
+	engine.GET("/stopInstance", stopInstance)
 
 	// сокет соединение авторизации
 	engine.GET("/ws", wsHandle)
@@ -130,7 +133,7 @@ func isConnectAndAuth() bool {
 }
 
 // Метод запускает инстанс
-func runInstance(ctx *gin.Context) {
+func startInstance(ctx *gin.Context) {
 
 	// считываем тело запроса
 	content, err := io.ReadAll(ctx.Request.Body)
@@ -218,6 +221,18 @@ func runInstance(ctx *gin.Context) {
 
 	// запускаем инстанс в отдельном потоке
 	go wainstance.StartInstance(proxy, true)
+
+	// отдаем ответ
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
+}
+
+// Метод останавливает инстанс
+func stopInstance(ctx *gin.Context) {
+
+	// запускаем инстанс в отдельном потоке
+	go wainstance.StopInstance()
 
 	// отдаем ответ
 	ctx.JSON(200, gin.H{
@@ -481,6 +496,18 @@ func sendMessage(ctx *gin.Context) {
 
 	//TODO проверять валидность данных
 
+	// проверяем клиента
+	if wainstance.InstanceWa.Client == nil {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not running",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// парсим идентифкатор Whatsapp, если chatId то его
 	recipient, ok := wainstance.ParseJID(strconv.FormatInt(requestSendMessage.Phone, 10))
 
@@ -510,7 +537,7 @@ func sendMessage(ctx *gin.Context) {
 
 		// отдаем ответ
 		ctx.JSON(500, gin.H{
-			"reason": "Error sending message",
+			"reason": "Error sending message: " + err.Error(),
 		})
 
 	} else {
