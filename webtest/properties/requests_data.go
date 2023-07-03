@@ -14,7 +14,7 @@ type RequestSendMessage struct {
 	IsForwarded     bool   `json:"isForwarded"`
 }
 
-// RequestCheckWhatsapp Структура запроса проверки номера на аккаунт Whatsapp
-type RequestCheckWhatsapp struct {
+// RequestWithPhoneNumber Структура запроса с номером телефона
+type RequestWithPhoneNumber struct {
 	Phone string `json:"phone"`
 }

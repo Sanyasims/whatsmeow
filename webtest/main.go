@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/gin-gonic/gin"
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/webtest/properties"
 	"go.mau.fi/whatsmeow/webtest/wainstance"
 	"go.mau.fi/whatsmeow/webtest/webhook"
@@ -103,6 +104,9 @@ func main() {
 
 	// разлогинивание инстанса
 	engine.GET("/logoutInstance", logoutInstance)
+
+	// получение аватара аккаунта Whatsapp
+	engine.POST("/getProfilePicture", getProfilePicture)
 
 	// запускаем сервер
 	err = engine.Run(wainstance.InstanceWa.Config.Host)
@@ -633,11 +637,11 @@ func checkWhatsapp(ctx *gin.Context) {
 		return
 	}
 
-	// объявляем структуру запроса проверки номера на аккаунт Whatsapp
-	var requestCheckWhatsapp properties.RequestCheckWhatsapp
+	// объявляем структуру запроса с номером телефона
+	var requestWithPhoneNumber properties.RequestWithPhoneNumber
 
 	// лесериализуем из JSON
-	err = json.Unmarshal(content, &requestCheckWhatsapp)
+	err = json.Unmarshal(content, &requestWithPhoneNumber)
 
 	// если есть ошибка
 	if err != nil {
@@ -655,7 +659,7 @@ func checkWhatsapp(ctx *gin.Context) {
 	}
 
 	// проверяем на Whatsapp
-	resp, err := wainstance.InstanceWa.Client.IsOnWhatsApp([]string{requestCheckWhatsapp.Phone})
+	resp, err := wainstance.InstanceWa.Client.IsOnWhatsApp([]string{requestWithPhoneNumber.Phone})
 
 	// если ошибка
 	if err != nil {
@@ -724,6 +728,107 @@ func logoutInstance(ctx *gin.Context) {
 		// отдаем ответ
 		ctx.JSON(200, gin.H{
 			"success": true,
+		})
+	}
+}
+
+// Метод получает аватар аккаунта Whatsapp
+func getProfilePicture(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса с номером телефона
+	var requestWithPhoneNumber properties.RequestWithPhoneNumber
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestWithPhoneNumber)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// парсим JID
+	jid, ok := wainstance.ParseJID(requestWithPhoneNumber.Phone)
+
+	// если не ок
+	if !ok {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Error parse JID",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// получаем профиль
+	pic, err := wainstance.InstanceWa.Client.GetProfilePictureInfo(jid, &whatsmeow.GetProfilePictureParams{
+		Preview:     false,
+		IsCommunity: false,
+		ExistingID:  "",
+	})
+
+	if err != nil {
+
+		wainstance.InstanceWa.Log.Errorf("Failed to get avatar: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Failed to get avatar: " + err.Error(),
+		})
+
+	} else if pic != nil {
+
+		// отдаем ответ
+		ctx.JSON(200, gin.H{
+			"avatarUrl": pic.URL,
+		})
+
+	} else {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "No avatar found",
 		})
 	}
 }
