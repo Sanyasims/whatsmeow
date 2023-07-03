@@ -103,6 +103,7 @@ type DeviceContainer interface {
 
 type HistoryStore interface {
 	DeviceHistorySync(messages []properties.DataMessage) error
+	DeleteDeviceHistory() error
 }
 
 type MessageSecretInsert struct {
@@ -179,6 +180,10 @@ func (device *Device) Delete() error {
 		return err
 	}
 	device.ID = nil
+	err = device.History.DeleteDeviceHistory()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

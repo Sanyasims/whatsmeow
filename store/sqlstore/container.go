@@ -276,6 +276,7 @@ const (
 		INSERT INTO history_messages (chat_id, message_id, message_timestamp, message_data, message_status, status_timestamp)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (chat_id, message_id) DO UPDATE SET message_timestamp = $3, message_data = $4`
+	deleteHistoryMessage = `DELETE FROM history_messages`
 )
 
 // DeviceHistorySync метод сохраняет историю
@@ -296,4 +297,11 @@ func (c *Container) DeviceHistorySync(messages []properties.DataMessage) error {
 	}
 
 	return nil
+}
+
+// DeleteDeviceHistory метод удаляет историю сообщений
+func (c *Container) DeleteDeviceHistory() error {
+
+	_, err := c.db.Exec(deleteHistoryMessage)
+	return err
 }
