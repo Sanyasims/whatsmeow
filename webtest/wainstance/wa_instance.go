@@ -970,6 +970,27 @@ func handler(rawEvt interface{}) {
 		// если текстовое сообщение
 		if evt.Info.Type == "text" && evt.Info.Category != "peer" {
 
+			// сериализуем сообщение
+			jsonData, err := json.Marshal(evt)
+
+			// создаем объект сообщения
+			dataMessage := properties.DataMessage{
+				ChatId:           evt.Info.Chat.String(),
+				MessageId:        evt.Info.ID,
+				MessageTimestamp: uint64(evt.Info.Timestamp.Unix()),
+				JsonData:         string(jsonData),
+				MessageStatus:    3,
+				StatusTimestamp:  uint64(evt.Info.Timestamp.Unix()),
+			}
+
+			// сохраняем сообщение в историю
+			err = InstanceWa.Client.HistorySync([]properties.DataMessage{dataMessage})
+
+			if err != nil {
+
+				fmt.Errorf("error saveOrUpdateMessage %v", err)
+			}
+
 			// создаем объект данных webhook о новом сообщении
 			newMessageWebhook := webhook.NewMessageWebhook{
 				TypeWebhook:     "newMessage",
