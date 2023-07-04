@@ -689,3 +689,13 @@ func (cli *Client) HistorySync(messages []properties.DataMessage) error {
 	// отдаем результат
 	return err
 }
+
+// UpdateStatusMessage метод обновляет статус сообщения
+func (cli *Client) UpdateStatusMessage(message properties.DataMessage) error {
+
+	// обновляем статус сообщения
+	err := cli.Store.UpdateStatusMessage(message)
+
+	// отдаем результат
+	return err
+}

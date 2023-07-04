@@ -986,9 +986,11 @@ func handler(rawEvt interface{}) {
 			// сохраняем сообщение в историю
 			err = InstanceWa.Client.HistorySync([]properties.DataMessage{dataMessage})
 
+			// если ошибка
 			if err != nil {
 
-				fmt.Errorf("error saveOrUpdateMessage %v", err)
+				// выводим ошибку
+				fmt.Errorf("error HistorySync %v", err)
 			}
 
 			// создаем объект данных webhook о новом сообщении
@@ -1056,6 +1058,7 @@ func handler(rawEvt interface{}) {
 			InstanceWa.Log.Infof("Saved image in message to %s", path)
 		}
 	case *events.Receipt:
+
 		if evt.Type == events.ReceiptTypeRead || evt.Type == events.ReceiptTypeReadSelf {
 
 			// выводим лог
@@ -1063,6 +1066,23 @@ func handler(rawEvt interface{}) {
 
 			// обходим массив идентифкаторов сообщений
 			for _, idMessage := range evt.MessageIDs {
+
+				// создаем объект сообщения
+				dataMessage := properties.DataMessage{
+					MessageId:       idMessage,
+					MessageStatus:   4,
+					StatusTimestamp: uint64(evt.Timestamp.Unix()),
+				}
+
+				// сохраняем сообщение в историю
+				err := InstanceWa.Client.UpdateStatusMessage(dataMessage)
+
+				// если ошибка
+				if err != nil {
+
+					// выводим ошибку
+					fmt.Errorf("error UpdateStatusMessage %v", err)
+				}
 
 				//создаем структуру вебхук о статусе сообщения
 				statusMessageWebhook := webhook.StatusMessageWebhook{
@@ -1092,6 +1112,23 @@ func handler(rawEvt interface{}) {
 
 			// обходим массив идентифкаторов сообщений
 			for _, idMessage := range evt.MessageIDs {
+
+				// создаем объект сообщения
+				dataMessage := properties.DataMessage{
+					MessageId:       idMessage,
+					MessageStatus:   3,
+					StatusTimestamp: uint64(evt.Timestamp.Unix()),
+				}
+
+				// сохраняем сообщение в историю
+				err := InstanceWa.Client.UpdateStatusMessage(dataMessage)
+
+				// если ошибка
+				if err != nil {
+
+					// выводим ошибку
+					fmt.Errorf("error UpdateStatusMessage %v", err)
+				}
 
 				//создаем структуру вебхук о статусе сообщения
 				statusMessageWebhook := webhook.StatusMessageWebhook{

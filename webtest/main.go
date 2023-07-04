@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/webtest/formats"
@@ -557,6 +558,29 @@ func sendMessage(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"id": resp.ID,
 		})
+
+		// сериализуем сообщение
+		jsonData, err := json.Marshal(msg)
+
+		// создаем объект сообщения
+		dataMessage := properties.DataMessage{
+			ChatId:           recipient.String(),
+			MessageId:        resp.ID,
+			MessageTimestamp: uint64(resp.Timestamp.Unix()),
+			JsonData:         string(jsonData),
+			MessageStatus:    1,
+			StatusTimestamp:  uint64(resp.Timestamp.Unix()),
+		}
+
+		// сохраняем сообщение в историю
+		err = wainstance.InstanceWa.Client.HistorySync([]properties.DataMessage{dataMessage})
+
+		// если ошибка
+		if err != nil {
+
+			// выводим ошибку
+			fmt.Errorf("error HistorySync %v", err)
+		}
 
 		// создаем структуру вебхук о статусе сообщения
 		statusMessageWebhook := webhook.StatusMessageWebhook{

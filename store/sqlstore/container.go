@@ -277,6 +277,7 @@ const (
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (chat_id, message_id) DO UPDATE SET message_timestamp = $3, message_data = $4`
 	deleteHistoryMessage = `DELETE FROM history_messages`
+	updateStatusMessage  = `UPDATE history_messages SET message_status = $1, status_timestamp = $2 WHERE message_id = $3`
 )
 
 // DeviceHistorySync метод сохраняет историю
@@ -303,5 +304,12 @@ func (c *Container) DeviceHistorySync(messages []properties.DataMessage) error {
 func (c *Container) DeleteDeviceHistory() error {
 
 	_, err := c.db.Exec(deleteHistoryMessage)
+	return err
+}
+
+// DeviceUpdateStatusMessage метод обновляет статус сообщения
+func (c *Container) DeviceUpdateStatusMessage(message properties.DataMessage) error {
+
+	_, err := c.db.Exec(updateStatusMessage, message.MessageStatus, message.StatusTimestamp, message.MessageId)
 	return err
 }

@@ -104,6 +104,7 @@ type DeviceContainer interface {
 type HistoryStore interface {
 	DeviceHistorySync(messages []properties.DataMessage) error
 	DeleteDeviceHistory() error
+	DeviceUpdateStatusMessage(message properties.DataMessage) error
 }
 
 type MessageSecretInsert struct {
@@ -192,6 +193,16 @@ func (device *Device) HistorySync(messages []properties.DataMessage) error {
 
 	// сохраняем историю
 	err := device.History.DeviceHistorySync(messages)
+
+	// отдаем результат
+	return err
+}
+
+// UpdateStatusMessage метод обновляет статус сообщения
+func (device *Device) UpdateStatusMessage(message properties.DataMessage) error {
+
+	// сохраняем историю
+	err := device.History.DeviceUpdateStatusMessage(message)
 
 	// отдаем результат
 	return err
