@@ -10,7 +10,7 @@ import (
 
 // Configuration Структура конфигурации
 type Configuration struct {
-	Host       string `json:"host"`
+	Port       string `json:"port"`
 	WebhookUrl string `json:"webhookUrl"`
 }
 

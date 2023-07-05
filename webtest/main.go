@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -52,7 +53,9 @@ func main() {
 		store.DeviceProps.RequireFullSync = proto.Bool(true)
 	}
 
-	wainstance.InstanceWa.Log.Infof("Run app")
+	osType := runtime.GOOS
+
+	wainstance.InstanceWa.Log.Infof("Run app on: %s", osType)
 
 	// считываем файл кофигурации
 	content, err := os.ReadFile("config.json")
@@ -113,8 +116,16 @@ func main() {
 	// получение статуса акаунта Whatsapp
 	engine.POST("/getStatusAccount", getStatusAccount)
 
-	// запускаем сервер
-	err = engine.Run(wainstance.InstanceWa.Config.Host)
+	// если os windows
+	if osType == "windows" {
+
+		// запускаем сервер
+		err = engine.Run("127.0.0.1:" + wainstance.InstanceWa.Config.Port)
+	} else {
+
+		// запускаем сервер
+		err = engine.Run("0.0.0.0:" + wainstance.InstanceWa.Config.Port)
+	}
 
 	// если есть ошибка
 	if err != nil {
