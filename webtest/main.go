@@ -155,8 +155,37 @@ func isConnectAndAuth() bool {
 	return true
 }
 
+// Метод проверяет валидность запроса
+func isValidRequest(ctx *gin.Context) bool {
+
+	// получаем заголовки
+	appSecret := ctx.Request.Header["App-Secret"]
+
+	// если нет заголовоков
+	if len(appSecret) < 1 {
+
+		// отдаем false
+		return false
+	}
+
+	// отдаем сравнение заголовков
+	return appSecret[0] == wainstance.InstanceWa.Config.AppSecret
+}
+
 // Метод запускает инстанс
 func startInstance(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// считываем тело запроса
 	content, err := io.ReadAll(ctx.Request.Body)
@@ -257,6 +286,18 @@ func startInstance(ctx *gin.Context) {
 // Метод останавливает инстанс
 func stopInstance(ctx *gin.Context) {
 
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// запускаем инстанс в отдельном потоке
 	go wainstance.StopInstance()
 
@@ -348,6 +389,18 @@ func wsHandle(ctx *gin.Context) {
 
 // Метод получает QR код авторизации GET запросом
 func getQrCode(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// считываем тело запроса
 	content, err := io.ReadAll(ctx.Request.Body)
@@ -480,6 +533,18 @@ func getQrCode(ctx *gin.Context) {
 
 // Метод отправляет сообщение
 func sendMessage(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// считываем тело запроса
 	content, err := io.ReadAll(ctx.Request.Body)
@@ -624,6 +689,18 @@ func sendMessage(ctx *gin.Context) {
 // Метод отдает контакты инстанса
 func getContacts(ctx *gin.Context) {
 
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
 
@@ -651,6 +728,18 @@ func getContacts(ctx *gin.Context) {
 
 // Метод проверяет номер на наличие аккаунта Whatsapp
 func checkWhatsapp(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
@@ -744,6 +833,18 @@ func checkWhatsapp(ctx *gin.Context) {
 // Метод разлогинивает инстанс
 func logoutInstance(ctx *gin.Context) {
 
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
+
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
 
@@ -779,6 +880,18 @@ func logoutInstance(ctx *gin.Context) {
 
 // Метод получает аватар аккаунта Whatsapp
 func getProfilePicture(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
@@ -880,6 +993,18 @@ func getProfilePicture(ctx *gin.Context) {
 
 // Метод получает статус аккаунта Whatsapp
 func getStatusAccount(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
@@ -1032,6 +1157,18 @@ func getStatusAccount(ctx *gin.Context) {
 
 // Метод устанавливает webhook URL
 func setWebhookUrl(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
 
 	// если инстнанс не подключен, либо не авторизован
 	if !isConnectAndAuth() {
