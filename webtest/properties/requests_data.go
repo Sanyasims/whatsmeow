@@ -2,7 +2,8 @@ package properties
 
 // RequestRunInstance структура запроса запуска инстанса
 type RequestRunInstance struct {
-	Proxy string `json:"proxy"`
+	Proxy      string `json:"proxy"`
+	WebhookUrl string `json:"webhookUrl"`
 }
 
 // RequestSendMessage Структура отправки текстового сообщения

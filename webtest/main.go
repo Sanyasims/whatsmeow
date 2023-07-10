@@ -212,6 +212,9 @@ func startInstance(ctx *gin.Context) {
 		return
 	}
 
+	//пишем webhook URL
+	wainstance.InstanceWa.WebhookUrl = requestRunInstance.WebhookUrl
+
 	// получаем прокси из строки
 	proxy, err := properties.GetProxy(requestRunInstance.Proxy)
 
