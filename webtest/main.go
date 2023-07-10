@@ -596,7 +596,7 @@ func sendMessage(ctx *gin.Context) {
 		// создаем структуру вебхук о статусе сообщения
 		statusMessageWebhook := webhook.StatusMessageWebhook{
 			TypeWebhook:     "statusMessage",
-			WebhookUrl:      wainstance.InstanceWa.Config.WebhookUrl,
+			WebhookUrl:      wainstance.InstanceWa.WebhookUrl,
 			CountTrySending: 0,
 			InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
 				IdInstance: 0,
@@ -611,7 +611,7 @@ func sendMessage(ctx *gin.Context) {
 		}
 
 		// отправляем вебхук
-		webhook.SendStatusMessageWebhook(statusMessageWebhook, wainstance.InstanceWa.Log)
+		statusMessageWebhook.SendStatusMessageWebhook(wainstance.InstanceWa.Log)
 	}
 }
 

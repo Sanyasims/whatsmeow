@@ -50,6 +50,7 @@ type Instance struct {
 	HistorySyncID                 int32
 	StartupTime                   int64
 	Config                        properties.Configuration
+	WebhookUrl                    string
 	WsQrClient                    *ws.ClientWs
 	ChainResponseGetStatusAccount chan properties.ResponseGetStatusAccount
 }
@@ -996,7 +997,7 @@ func handler(rawEvt interface{}) {
 			// создаем объект данных webhook о новом сообщении
 			newMessageWebhook := webhook.NewMessageWebhook{
 				TypeWebhook:     "newMessage",
-				WebhookUrl:      InstanceWa.Config.WebhookUrl,
+				WebhookUrl:      InstanceWa.WebhookUrl,
 				CountTrySending: 0,
 				InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
 					IdInstance: 0,
@@ -1019,7 +1020,7 @@ func handler(rawEvt interface{}) {
 			}
 
 			// отправляем вебхук
-			webhook.SendNewMessageWebhook(newMessageWebhook, InstanceWa.Log)
+			newMessageWebhook.SendNewMessageWebhook(InstanceWa.Log)
 		}
 
 		if evt.Message.GetPollUpdateMessage() != nil {
@@ -1087,7 +1088,7 @@ func handler(rawEvt interface{}) {
 				//создаем структуру вебхук о статусе сообщения
 				statusMessageWebhook := webhook.StatusMessageWebhook{
 					TypeWebhook:     "statusMessage",
-					WebhookUrl:      InstanceWa.Config.WebhookUrl,
+					WebhookUrl:      InstanceWa.WebhookUrl,
 					CountTrySending: 0,
 					InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
 						IdInstance: 0,
@@ -1102,7 +1103,7 @@ func handler(rawEvt interface{}) {
 				}
 
 				//отправляем вебхук
-				webhook.SendStatusMessageWebhook(statusMessageWebhook, InstanceWa.Log)
+				statusMessageWebhook.SendStatusMessageWebhook(InstanceWa.Log)
 			}
 
 		} else if evt.Type == events.ReceiptTypeDelivered {
@@ -1133,7 +1134,7 @@ func handler(rawEvt interface{}) {
 				//создаем структуру вебхук о статусе сообщения
 				statusMessageWebhook := webhook.StatusMessageWebhook{
 					TypeWebhook:     "statusMessage",
-					WebhookUrl:      InstanceWa.Config.WebhookUrl,
+					WebhookUrl:      InstanceWa.WebhookUrl,
 					CountTrySending: 0,
 					InstanceWhatsapp: webhook.InstanceWhatsappWebhook{
 						IdInstance: 0,
@@ -1148,7 +1149,7 @@ func handler(rawEvt interface{}) {
 				}
 
 				//отправляем вебхук
-				webhook.SendStatusMessageWebhook(statusMessageWebhook, InstanceWa.Log)
+				statusMessageWebhook.SendStatusMessageWebhook(InstanceWa.Log)
 			}
 		}
 	case *events.Presence:

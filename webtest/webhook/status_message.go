@@ -25,7 +25,14 @@ type DataStatusMessage struct {
 }
 
 // SendStatusMessageWebhook Метод отправляет вебхук о статусе сообщения
-func SendStatusMessageWebhook(statusMessageWebhook StatusMessageWebhook, log waLog.Logger) {
+func (statusMessageWebhook *StatusMessageWebhook) SendStatusMessageWebhook(log waLog.Logger) {
+
+	// если вебхук не установлен
+	if statusMessageWebhook.WebhookUrl == "" {
+
+		// не продолжаем
+		return
+	}
 
 	// сериализуем в JSON
 	postBody, err := json.Marshal(statusMessageWebhook)

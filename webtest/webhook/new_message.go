@@ -39,7 +39,14 @@ type DataWhatsappMessage struct {
 }
 
 // SendNewMessageWebhook Метод отправляет вебхук о новом входящем сообщении
-func SendNewMessageWebhook(newMessageWebhook NewMessageWebhook, log waLog.Logger) {
+func (newMessageWebhook *NewMessageWebhook) SendNewMessageWebhook(log waLog.Logger) {
+
+	// если вебхук не установлен
+	if newMessageWebhook.WebhookUrl == "" {
+
+		// не продолжаем
+		return
+	}
 
 	// сериализуем в JSON
 	postBody, err := json.Marshal(newMessageWebhook)
