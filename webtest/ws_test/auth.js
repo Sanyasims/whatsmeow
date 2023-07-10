@@ -48,7 +48,7 @@ class InstanceAuthorization {
 		this.loaderButton.setDisable();
 
 		//устанавливаем сокет соединение
-		this.webSocket = new WebSocket(`ws://127.0.0.1:10001/ws?proxy=217.29.63.202:10278:PyWKxF:AbMqXf`);
+		this.webSocket = new WebSocket(`ws://127.0.0.1:10000/ws?proxy=217.29.63.202:10278:PyWKxF:AbMqXf&app_secret=af15ede2bbad492e776f12b1b2ff2c2bbc544018`);
 
 		//открытие соединения
 		this.webSocket.onopen = () => {

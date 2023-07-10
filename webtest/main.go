@@ -333,10 +333,27 @@ func wsHandle(ctx *gin.Context) {
 	wainstance.InstanceWa.WsQrClient = clientWs
 
 	// получаем параметр прокси
-	query, ok := ctx.GetQuery("proxy")
+	queryAppSecret, ok := ctx.GetQuery("app_secret")
 
 	//если не ок или нет параметра
-	if !ok || query == "" {
+	if !ok || queryAppSecret == "" || queryAppSecret != wainstance.InstanceWa.Config.AppSecret {
+
+		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
+			Type:   "error",
+			Reason: "Bad app secret",
+		})
+
+		wainstance.InstanceWa.WsQrClient.Close()
+
+		//не продолжаем
+		return
+	}
+
+	// получаем параметр прокси
+	queryProxy, ok := ctx.GetQuery("proxy")
+
+	//если не ок или нет параметра
+	if !ok || queryProxy == "" {
 
 		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
 			Type:   "error",
@@ -350,7 +367,7 @@ func wsHandle(ctx *gin.Context) {
 	}
 
 	// получаем прокси из строки
-	proxy, err := properties.GetProxy(query)
+	proxy, err := properties.GetProxy(queryProxy)
 
 	// если есть ошибка
 	if err != nil {
