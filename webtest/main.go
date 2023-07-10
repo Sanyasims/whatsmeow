@@ -116,6 +116,9 @@ func main() {
 	// получение статуса акаунта Whatsapp
 	engine.POST("/getStatusAccount", getStatusAccount)
 
+	// установка webhook URL
+	engine.POST("/setWebhookUrl", setWebhookUrl)
+
 	// если os windows
 	if osType == "windows" {
 
@@ -1022,4 +1025,67 @@ func getStatusAccount(ctx *gin.Context) {
 
 	// отдаем ответ
 	ctx.JSON(200, responseGetStatusAccount)
+}
+
+// Метод устанавливает webhook URL
+func setWebhookUrl(ctx *gin.Context) {
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса установки Webhook URL
+	var requestSetWebhookUrl properties.RequestSetWebhookUrl
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestSetWebhookUrl)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	//пишем webhook URL
+	wainstance.InstanceWa.WebhookUrl = requestSetWebhookUrl.WebhookUrl
+
+	// отдаем ответ
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
 }

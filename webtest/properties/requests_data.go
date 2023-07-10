@@ -18,3 +18,8 @@ type RequestSendMessage struct {
 type RequestWithPhoneNumber struct {
 	Phone string `json:"phone"`
 }
+
+// RequestSetWebhookUrl Структура запроса установки Webhook URL
+type RequestSetWebhookUrl struct {
+	WebhookUrl string `json:"webhookUrl"`
+}
