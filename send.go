@@ -38,13 +38,13 @@ import (
 //	msgID := whatsmeow.GenerateMessageID()
 //	cli.SendMessage(context.Background(), targetJID, &waProto.Message{...}, whatsmeow.SendRequestExtra{ID: msgID})
 func GenerateMessageID() types.MessageID {
-	id := make([]byte, 8)
+	id := make([]byte, 6)
 	_, err := rand.Read(id)
 	if err != nil {
 		// Out of entropy
 		panic(err)
 	}
-	return "3EB0" + strings.ToUpper(hex.EncodeToString(id))
+	return "BAE5" + strings.ToUpper(hex.EncodeToString(id))
 }
 
 type MessageDebugTimings struct {
