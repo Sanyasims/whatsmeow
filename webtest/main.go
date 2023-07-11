@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/webtest/formats"
@@ -693,7 +692,7 @@ func sendMessage(ctx *gin.Context) {
 		if err != nil {
 
 			// выводим ошибку
-			fmt.Errorf("error HistorySync %v", err)
+			wainstance.InstanceWa.Log.Errorf("error HistorySync %v", err)
 		}
 
 		// создаем структуру вебхук о статусе сообщения
