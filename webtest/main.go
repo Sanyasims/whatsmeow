@@ -158,6 +158,13 @@ func isConnectAndAuth() bool {
 // Метод проверяет валидность запроса
 func isValidRequest(ctx *gin.Context) bool {
 
+	// если не проверяем секретный заголовок
+	if !wainstance.InstanceWa.Config.CheckSecret {
+
+		// отдаем что щапрос валиден
+		return true
+	}
+
 	// получаем заголовки
 	appSecret := ctx.Request.Header["App-Secret"]
 
@@ -332,21 +339,25 @@ func wsHandle(ctx *gin.Context) {
 	// пишем клиента в инстанс
 	wainstance.InstanceWa.WsQrClient = clientWs
 
-	// получаем параметр прокси
-	queryAppSecret, ok := ctx.GetQuery("app_secret")
+	// если нужно проверять секретный заголовок
+	if wainstance.InstanceWa.Config.CheckSecret {
 
-	//если не ок или нет параметра
-	if !ok || queryAppSecret == "" || queryAppSecret != wainstance.InstanceWa.Config.AppSecret {
+		// получаем параметр прокси
+		queryAppSecret, ok := ctx.GetQuery("app_secret")
 
-		wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
-			Type:   "error",
-			Reason: "Bad app secret",
-		})
+		//если не ок или нет параметра
+		if !ok || queryAppSecret == "" || queryAppSecret != wainstance.InstanceWa.Config.AppSecret {
 
-		wainstance.InstanceWa.WsQrClient.Close()
+			wainstance.InstanceWa.WsQrClient.Send(ws.AuthMessage{
+				Type:   "error",
+				Reason: "Bad app secret",
+			})
 
-		//не продолжаем
-		return
+			wainstance.InstanceWa.WsQrClient.Close()
+
+			//не продолжаем
+			return
+		}
 	}
 
 	// получаем параметр прокси

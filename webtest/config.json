@@ -1,4 +1,5 @@
 {
 	"port": "10000",
-	"appSecret": "af15ede2bbad492e776f12b1b2ff2c2bbc544018"
+	"appSecret": "af15ede2bbad492e776f12b1b2ff2c2bbc544018",
+	"checkSecret": false
 }

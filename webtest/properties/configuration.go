@@ -10,8 +10,9 @@ import (
 
 // Configuration Структура конфигурации
 type Configuration struct {
-	Port      string `json:"port"`
-	AppSecret string `json:"appSecret"`
+	Port        string `json:"port"`
+	AppSecret   string `json:"appSecret"`
+	CheckSecret bool   `json:"checkSecret"`
 }
 
 // GetProxy метод получает прокси из строки
