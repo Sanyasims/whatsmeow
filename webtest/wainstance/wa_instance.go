@@ -994,6 +994,26 @@ func handler(rawEvt interface{}) {
 				fmt.Errorf("error HistorySync %v", err)
 			}
 
+			// текст сообщения
+			var textMessage string
+
+			// если обычный текст
+			if evt.Message.Conversation != nil {
+
+				//пишем текст сообщения
+				textMessage = *evt.Message.Conversation
+
+			} else if evt.Message.ExtendedTextMessage != nil { //если расширенное текстовое сообщение
+
+				// пишем текст сообщения
+				textMessage = *evt.Message.ExtendedTextMessage.Text
+
+			} else {
+
+				// не продолжаем
+				return
+			}
+
 			// создаем объект данных webhook о новом сообщении
 			newMessageWebhook := webhook.NewMessageWebhook{
 				TypeWebhook:     "newMessage",
@@ -1012,7 +1032,7 @@ func handler(rawEvt interface{}) {
 					},
 					Message: webhook.DataWhatsappMessage{
 						TypeMessage: "textMessage",
-						Text:        *evt.Message.Conversation,
+						Text:        textMessage,
 					},
 					MessageTimestamp: evt.Info.Timestamp.Unix(),
 					Status:           "delivered",
