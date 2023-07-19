@@ -642,11 +642,7 @@ func sendMessage(ctx *gin.Context) {
 	}
 
 	// кодируем сообщение
-	msg := &waProto.Message{
-		ExtendedTextMessage: &waProto.ExtendedTextMessage{
-			Text: proto.String(requestSendMessage.Message),
-		},
-	}
+	msg := &waProto.Message{Conversation: proto.String(requestSendMessage.Message)}
 
 	// отправляем сообщение
 	resp, err := wainstance.InstanceWa.Client.SendMessage(context.Background(), recipient, msg)
