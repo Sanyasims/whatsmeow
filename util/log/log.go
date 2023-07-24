@@ -9,6 +9,8 @@ package waLog
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -62,7 +64,29 @@ func (s *stdoutLogger) outputf(level, msg string, args ...interface{}) {
 		colorStart = colors[level]
 		colorReset = "\033[0m"
 	}
-	fmt.Printf("%s%s [%s %s] %s%s\n", time.Now().Format("15:04:05.000"), colorStart, s.mod, level, fmt.Sprintf(msg, args...), colorReset)
+
+	data := fmt.Sprintf("%s%s [%s %s] %s%s\n", time.Now().Format("15:04:05.000"), colorStart, s.mod, level, fmt.Sprintf(msg, args...), colorReset)
+
+	fmt.Printf(data)
+
+	// log to custom file
+	LogFile := "log.log"
+
+	// open log file
+	logFile, err := os.OpenFile(LogFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	defer logFile.Close()
+
+	// Set log out put and enjoy :)
+	log.SetOutput(logFile)
+
+	log.SetFlags(log.Flags() &^ (log.Ldate))
+
+	log.Print(data)
 }
 
 func (s *stdoutLogger) Errorf(msg string, args ...interface{}) { s.outputf("ERROR", msg, args...) }
