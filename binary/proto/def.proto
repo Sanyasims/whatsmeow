@@ -16,6 +16,7 @@ message ADVSignedDeviceIdentity {
 message ADVSignedDeviceIdentityHMAC {
     optional bytes details = 1;
     optional bytes hmac = 2;
+    optional ADVEncryptionType accountType = 3;
 }
 
 message ADVKeyIndexList {
@@ -85,50 +86,6 @@ message DeviceProps {
     optional PlatformType platformType = 3;
     optional bool requireFullSync = 4;
     optional HistorySyncConfig historySyncConfig = 5;
-}
-
-message LocationMessage {
-    optional double degreesLatitude = 1;
-    optional double degreesLongitude = 2;
-    optional string name = 3;
-    optional string address = 4;
-    optional string url = 5;
-    optional bool isLive = 6;
-    optional uint32 accuracyInMeters = 7;
-    optional float speedInMps = 8;
-    optional uint32 degreesClockwiseFromMagneticNorth = 9;
-    optional string comment = 11;
-    optional bytes jpegThumbnail = 16;
-    optional ContextInfo contextInfo = 17;
-}
-
-message LiveLocationMessage {
-    optional double degreesLatitude = 1;
-    optional double degreesLongitude = 2;
-    optional uint32 accuracyInMeters = 3;
-    optional float speedInMps = 4;
-    optional uint32 degreesClockwiseFromMagneticNorth = 5;
-    optional string caption = 6;
-    optional int64 sequenceNumber = 7;
-    optional uint32 timeOffset = 8;
-    optional bytes jpegThumbnail = 16;
-    optional ContextInfo contextInfo = 17;
-}
-
-message ListResponseMessage {
-    message SingleSelectReply {
-        optional string selectedRowId = 1;
-    }
-    
-    enum ListType {
-        UNKNOWN = 0;
-        SINGLE_SELECT = 1;
-    }
-    optional string title = 1;
-    optional ListType listType = 2;
-    optional SingleSelectReply singleSelectReply = 3;
-    optional ContextInfo contextInfo = 4;
-    optional string description = 5;
 }
 
 message ListMessage {
@@ -431,6 +388,8 @@ message ExtendedTextMessage {
     enum PreviewType {
         NONE = 0;
         VIDEO = 1;
+        PLACEHOLDER = 4;
+        IMAGE = 5;
     }
     enum InviteLinkGroupType {
         DEFAULT = 0;
@@ -439,12 +398,9 @@ message ExtendedTextMessage {
         DEFAULT_SUB = 3;
     }
     enum FontType {
-        SANS_SERIF = 0;
-        SERIF = 1;
-        NORICAN_REGULAR = 2;
-        BRYNDAN_WRITE = 3;
-        BEBASNEUE_REGULAR = 4;
-        OSWALD_HEAVY = 5;
+        SYSTEM = 0;
+        SYSTEM_TEXT = 1;
+        FB_SCRIPT = 2;
         SYSTEM_BOLD = 6;
         MORNINGBREEZE_REGULAR = 7;
         CALISTOGA_REGULAR = 8;
@@ -478,6 +434,12 @@ message ExtendedTextMessage {
 }
 
 message EncReactionMessage {
+    optional MessageKey targetMessageKey = 1;
+    optional bytes encPayload = 2;
+    optional bytes encIv = 3;
+}
+
+message EncCommentMessage {
     optional MessageKey targetMessageKey = 1;
     optional bytes encPayload = 2;
     optional bytes encIv = 3;
@@ -542,6 +504,34 @@ message Call {
     optional string conversionSource = 2;
     optional bytes conversionData = 3;
     optional uint32 conversionDelaySeconds = 4;
+}
+
+message CallLogMessage {
+    enum CallType {
+        REGULAR = 0;
+        SCHEDULED_CALL = 1;
+        VOICE_CHAT = 2;
+    }
+    message CallParticipant {
+        optional string jid = 1;
+        optional CallOutcome callOutcome = 2;
+    }
+    
+    enum CallOutcome {
+        CONNECTED = 0;
+        MISSED = 1;
+        FAILED = 2;
+        REJECTED = 3;
+        ACCEPTED_ELSEWHERE = 4;
+        ONGOING = 5;
+        SILENCED_BY_DND = 6;
+        SILENCED_UNKNOWN_CALLER = 7;
+    }
+    optional bool isVideo = 1;
+    optional CallOutcome callOutcome = 2;
+    optional int64 durationSecs = 3;
+    optional CallType callType = 4;
+    repeated CallParticipant participants = 5;
 }
 
 message ButtonsResponseMessage {
@@ -611,6 +601,7 @@ message BotFeedbackMessage {
         BOT_FEEDBACK_NEGATIVE_ACCURATE = 4;
         BOT_FEEDBACK_NEGATIVE_SAFE = 5;
         BOT_FEEDBACK_NEGATIVE_OTHER = 6;
+        BOT_FEEDBACK_NEGATIVE_CAUTIOUS = 7;
     }
     optional MessageKey messageKey = 1;
     optional BotFeedbackKind kind = 2;
@@ -751,6 +742,7 @@ message ContextInfo {
     message ForwardedNewsletterMessageInfo {
         optional string newsletterJid = 1;
         optional int32 serverMessageId = 2;
+        optional string newsletterName = 3;
     }
     
     message ExternalAdReplyInfo {
@@ -821,15 +813,20 @@ message ContextInfo {
     optional UTMInfo utm = 41;
     optional ForwardedNewsletterMessageInfo forwardedNewsletterMessageInfo = 43;
     optional BusinessMessageForwardInfo businessMessageForwardInfo = 44;
+    optional string smbClientCampaignId = 45;
 }
 
 message BotMetadata {
     optional BotAvatarMetadata avatarMetadata = 1;
+    optional string personaId = 2;
 }
 
 message BotAvatarMetadata {
     optional uint32 sentiment = 1;
     optional string behaviorGraph = 2;
+    optional uint32 action = 3;
+    optional uint32 intensity = 4;
+    optional uint32 wordCount = 5;
 }
 
 message ActionLink {
@@ -957,6 +954,8 @@ message Message {
     optional ScheduledCallEditMessage scheduledCallEditMessage = 65;
     optional VideoMessage ptvMessage = 66;
     optional FutureProofMessage botInvokeMessage = 67;
+    optional EncCommentMessage encCommentMessage = 68;
+    optional CallLogMessage callLogMesssage = 69;
 }
 
 message MessageSecretMessage {
@@ -1075,6 +1074,7 @@ message StickerMessage {
     optional ContextInfo contextInfo = 17;
     optional int64 stickerSentTs = 18;
     optional bool isAvatar = 19;
+    optional bool isAiSticker = 20;
 }
 
 message SenderKeyDistributionMessage {
@@ -1321,11 +1321,11 @@ message PaymentInviteMessage {
 }
 
 message OrderMessage {
-    enum OrderStatus {
-        INQUIRY = 1;
-    }
     enum OrderSurface {
         CATALOG = 1;
+    }
+    enum OrderStatus {
+        INQUIRY = 1;
     }
     optional string orderId = 1;
     optional bytes thumbnail = 2;
@@ -1339,6 +1339,50 @@ message OrderMessage {
     optional int64 totalAmount1000 = 10;
     optional string totalCurrencyCode = 11;
     optional ContextInfo contextInfo = 17;
+}
+
+message LocationMessage {
+    optional double degreesLatitude = 1;
+    optional double degreesLongitude = 2;
+    optional string name = 3;
+    optional string address = 4;
+    optional string url = 5;
+    optional bool isLive = 6;
+    optional uint32 accuracyInMeters = 7;
+    optional float speedInMps = 8;
+    optional uint32 degreesClockwiseFromMagneticNorth = 9;
+    optional string comment = 11;
+    optional bytes jpegThumbnail = 16;
+    optional ContextInfo contextInfo = 17;
+}
+
+message LiveLocationMessage {
+    optional double degreesLatitude = 1;
+    optional double degreesLongitude = 2;
+    optional uint32 accuracyInMeters = 3;
+    optional float speedInMps = 4;
+    optional uint32 degreesClockwiseFromMagneticNorth = 5;
+    optional string caption = 6;
+    optional int64 sequenceNumber = 7;
+    optional uint32 timeOffset = 8;
+    optional bytes jpegThumbnail = 16;
+    optional ContextInfo contextInfo = 17;
+}
+
+message ListResponseMessage {
+    enum ListType {
+        UNKNOWN = 0;
+        SINGLE_SELECT = 1;
+    }
+    message SingleSelectReply {
+        optional string selectedRowId = 1;
+    }
+    
+    optional string title = 1;
+    optional ListType listType = 2;
+    optional SingleSelectReply singleSelectReply = 3;
+    optional ContextInfo contextInfo = 4;
+    optional string description = 5;
 }
 
 message EphemeralSetting {
@@ -2014,6 +2058,7 @@ message ClientPayload {
             VRDEVICE = 31;
             BLUE_WEB = 32;
             IPAD = 33;
+            TEST = 34;
         }
         enum DeviceType {
             PHONE = 0;
@@ -2334,6 +2379,8 @@ message WebMessageInfo {
         LINKED_GROUP_CALL_START = 181;
         REPORT_TO_ADMIN_ENABLED_STATUS = 182;
         EMPTY_SUBGROUP_CREATE = 183;
+        SCHEDULED_CALL_CANCEL = 184;
+        SUBGROUP_ADMIN_TRIGGERED_AUTO_ADD_RICH = 185;
     }
     enum Status {
         ERROR = 0;

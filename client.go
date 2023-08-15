@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.mau.fi/util/random"
+
 	"go.mau.fi/whatsmeow/appstate"
 	waBinary "go.mau.fi/whatsmeow/binary"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -30,7 +32,6 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	"go.mau.fi/whatsmeow/util/keys"
 	waLog "go.mau.fi/whatsmeow/util/log"
-	"go.mau.fi/whatsmeow/util/randbytes"
 )
 
 // EventHandler is a function that can handle events from WhatsApp.
@@ -66,6 +67,10 @@ type Client struct {
 	// EmitAppStateEventsOnFullSync can be set to true if you want to get app state events emitted
 	// even when re-syncing the whole state.
 	EmitAppStateEventsOnFullSync bool
+
+	AutomaticMessageRerequestFromPhone bool
+	pendingPhoneRerequests             map[types.MessageID]context.CancelFunc
+	pendingPhoneRerequestsLock         sync.RWMutex
 
 	appStateProc     *appstate.Processor
 	appStateSyncLock sync.Mutex
@@ -169,7 +174,7 @@ func NewClient(deviceStore *store.Device, log waLog.Logger) *Client {
 	if log == nil {
 		log = waLog.Noop
 	}
-	uniqueIDPrefix := randbytes.Make(2)
+	uniqueIDPrefix := random.Bytes(2)
 	cli := &Client{
 		http: &http.Client{
 			Transport: (http.DefaultTransport.(*http.Transport)).Clone(),
@@ -196,6 +201,8 @@ func NewClient(deviceStore *store.Device, log waLog.Logger) *Client {
 		sessionRecreateHistory: make(map[types.JID]time.Time),
 		GetMessageForRetry:     func(requester, to types.JID, id types.MessageID) *waProto.Message { return nil },
 		appStateKeyRequests:    make(map[string]time.Time),
+
+		pendingPhoneRerequests: make(map[types.MessageID]context.CancelFunc),
 
 		EnableAutoReconnect:   true,
 		AutoTrustIdentity:     true,
@@ -645,6 +652,13 @@ func (cli *Client) dispatchEvent(evt interface{}) {
 //		yourNormalEventHandler(evt)
 //	}
 func (cli *Client) ParseWebMessage(chatJID types.JID, webMsg *waProto.WebMessageInfo) (*events.Message, error) {
+	var err error
+	if chatJID.IsEmpty() {
+		chatJID, err = types.ParseJID(webMsg.GetKey().GetRemoteJid())
+		if err != nil {
+			return nil, fmt.Errorf("no chat JID provided and failed to parse remote JID: %w", err)
+		}
+	}
 	info := types.MessageInfo{
 		MessageSource: types.MessageSource{
 			Chat:     chatJID,
@@ -655,7 +669,6 @@ func (cli *Client) ParseWebMessage(chatJID types.JID, webMsg *waProto.WebMessage
 		PushName:  webMsg.GetPushName(),
 		Timestamp: time.Unix(int64(webMsg.GetMessageTimestamp()), 0),
 	}
-	var err error
 	if info.IsFromMe {
 		info.Sender = cli.getOwnID().ToNonAD()
 		if info.Sender.IsEmpty() {
@@ -674,8 +687,9 @@ func (cli *Client) ParseWebMessage(chatJID types.JID, webMsg *waProto.WebMessage
 		return nil, fmt.Errorf("failed to parse sender of message %s: %v", info.ID, err)
 	}
 	evt := &events.Message{
-		RawMessage: webMsg.GetMessage(),
-		Info:       info,
+		RawMessage:   webMsg.GetMessage(),
+		SourceWebMsg: webMsg,
+		Info:         info,
 	}
 	evt.UnwrapRaw()
 	return evt, nil
