@@ -8,6 +8,7 @@ type RequestRunInstance struct {
 
 // RequestSendMessage Структура отправки текстового сообщения
 type RequestSendMessage struct {
+	Id              string `json:"id"`
 	ChatId          string `json:"chatId"`
 	Phone           int64  `json:"phone"`
 	Message         string `json:"message"`

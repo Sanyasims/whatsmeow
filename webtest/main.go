@@ -648,8 +648,13 @@ func sendMessage(ctx *gin.Context) {
 		},
 	}
 
+	// добавляем идентификатор сообщения
+	extra := whatsmeow.SendRequestExtra{
+		ID: requestSendMessage.Id,
+	}
+
 	// отправляем сообщение
-	resp, err := wainstance.InstanceWa.Client.SendMessage(context.Background(), recipient, msg)
+	resp, err := wainstance.InstanceWa.Client.SendMessage(context.Background(), recipient, msg, extra)
 
 	// если есть ошибка
 	if err != nil {
