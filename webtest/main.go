@@ -115,6 +115,9 @@ func main() {
 	// получение статуса акаунта Whatsapp
 	engine.POST("/getStatusAccount", getStatusAccount)
 
+	// установка статуса акаунта Whatsapp
+	engine.POST("/setStatusAccount", setStatusAccount)
+
 	// установка webhook URL
 	engine.POST("/setWebhookUrl", setWebhookUrl)
 
@@ -1189,6 +1192,96 @@ func getStatusAccount(ctx *gin.Context) {
 
 	// отдаем ответ
 	ctx.JSON(200, responseGetStatusAccount)
+}
+
+// Метод устанавливает статус аккаунта Whatsapp
+func setStatusAccount(ctx *gin.Context) {
+
+	// если запрос не валиден
+	if !isValidRequest(ctx) {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request header",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// если инстнанс не подключен, либо не авторизован
+	if !isConnectAndAuth() {
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Instance not connected or not auth",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// считываем тело запроса
+	content, err := io.ReadAll(ctx.Request.Body)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error read body request: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// объявляем структуру запроса с номером телефона
+	var requestSetStatus properties.RequestSetStatus
+
+	// лесериализуем из JSON
+	err = json.Unmarshal(content, &requestSetStatus)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// получаем из канала данные о пользователе
+	err = wainstance.InstanceWa.Client.SetStatusMessage(requestSetStatus.Status)
+
+	// если есть ошибка
+	if err != nil {
+
+		// логируем ошибку
+		wainstance.InstanceWa.Log.Errorf("Error during parse RequestSendMessage: %v", err)
+
+		// отдаем ответ
+		ctx.JSON(400, gin.H{
+			"reason": "Bad request data",
+		})
+
+		// не продолжаем
+		return
+	}
+
+	// отдаем ответ
+	ctx.JSON(200, gin.H{
+		"success": true,
+	})
 }
 
 // Метод устанавливает webhook URL
