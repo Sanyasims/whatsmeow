@@ -70,7 +70,7 @@ func (s *stdoutLogger) outputf(level, msg string, args ...interface{}) {
 	fmt.Printf(data)
 
 	// log to custom file
-	LogFile := "log.log"
+	LogFile := "data/log.txt"
 
 	// open log file
 	logFile, err := os.OpenFile(LogFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)

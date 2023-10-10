@@ -36,7 +36,7 @@ func main() {
 		DbLog:           waLog.Stdout("Database", "DEBUG", true),
 		DebugLogs:       flag.Bool("debug", true, "Enable debug logs?"),
 		DbDialect:       flag.String("db-dialect", "sqlite3", "Database dialect (sqlite3 or postgres)"),
-		DbAddress:       flag.String("db-address", "file:webtest.db?_foreign_keys=on", "Database address"),
+		DbAddress:       flag.String("db-address", "file:data/webtest.db?_foreign_keys=on", "Database address"),
 		RequestFullSync: flag.Bool("request-full-sync", false, "Request full (1 year) history sync when logging in?"),
 		PairRejectChan:  make(chan bool, 1),
 		HistorySyncID:   0,
