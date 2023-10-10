@@ -285,6 +285,7 @@ func startInstance(ctx *gin.Context) {
 
 	// запускаем инстанс в отдельном потоке
 	go wainstance.StartInstance(proxy, true)
+	//test
 
 	// отдаем ответ
 	ctx.JSON(200, gin.H{
