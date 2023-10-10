@@ -1035,7 +1035,7 @@ func handler(rawEvt interface{}) {
 						Text:        textMessage,
 					},
 					MessageTimestamp: evt.Info.Timestamp.Unix(),
-					Status:           "delivered",
+					Status:           "sent",
 				},
 			}
 
