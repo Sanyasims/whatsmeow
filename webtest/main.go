@@ -47,6 +47,8 @@ func main() {
 
 	flag.Parse()
 
+	//test
+
 	if *wainstance.InstanceWa.RequestFullSync {
 
 		store.DeviceProps.RequireFullSync = proto.Bool(true)
