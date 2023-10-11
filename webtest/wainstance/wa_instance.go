@@ -1015,6 +1015,17 @@ func handler(rawEvt interface{}) {
 			}
 
 			// создаем объект данных webhook о новом сообщении
+
+			// Переменная для статуса сообщения
+			var status string
+
+			// Если новое сообщение от аккаунта - sent, если нет - delivered
+			if evt.Info.IsFromMe {
+				status = "sent"
+			} else {
+				status = "delivered"
+			}
+
 			newMessageWebhook := webhook.NewMessageWebhook{
 				TypeWebhook:     "newMessage",
 				WebhookUrl:      InstanceWa.WebhookUrl,
@@ -1035,7 +1046,7 @@ func handler(rawEvt interface{}) {
 						Text:        textMessage,
 					},
 					MessageTimestamp: evt.Info.Timestamp.Unix(),
-					Status:           "sent",
+					Status:           status,
 				},
 			}
 
