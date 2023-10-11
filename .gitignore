@@ -3,5 +3,5 @@
 /.idea/vcs.xml
 /.idea/whatsmeow.iml
 /.idea/dataSources.xml
-/webtest/log.log
 /.idea/remote-targets.xml
+/webtest/data/
